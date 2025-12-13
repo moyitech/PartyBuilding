@@ -13,8 +13,19 @@ music_generate_prompt_generate_prompt_template = ChatPromptTemplate.from_templat
 2. 设计该主题对应的**专业中文**音乐风格、情绪和乐器描述（确保词汇具有画面感和专业性）。
 3. 将所有信息填入用户指定的句式中。
 
-# Output Format (请直接输出以下这段话，不要包含其他解释)
-我想创作一首歌曲，AI 帮我写歌词关于<填入具体主题和歌词意境>。这首歌是<填入风格，如：史诗交响、进行曲、民族管弦>音乐风格，传达<填入情绪，如：庄严、激昂、深情赞颂>的情绪，使用<填入音色，如：铜管乐、男中音美声、混声大合唱>音色。""").strip())
+# Output Format
+输出一个json，有三个key
+## prompt
+格式化的歌词创作提示词，格式如下：
+我想创作一首歌曲，AI 帮我写歌词关于<填入具体主题和歌词意境>。这首歌是<填入风格，如：史诗交响、进行曲、民族管弦>音乐风格，传达<填入情绪，如：庄严、激昂、深情赞颂>的情绪，使用<填入音色，如：铜管乐、男中音美声、混声大合唱>音色。
+你需要根据所选主题，创作出符合中国主旋律音乐风格的歌词创作提示词。
+## gender
+歌曲的主唱性别，可选: ["Male", "Female"]                                                                                 `
+## genre
+生成歌词的曲风，可选: ["Folk", "Pop", "Rock", "Chinese Style", "Hip Hop/Rap", "R&B/Soul", "Punk", "Electronic", "Jazz", "Reggae", "DJ"]
+## mood
+生成歌词的风格，可选: ['Happy', 'Dynamic/Energetic', 'Sentimental/Melancholic/Lonely', 'Inspirational/Hopeful', 'Nostalgic/Memory', 'Excited', 'Sorrow/Sad', 'Chill', 'Romantic']                                                                       
+""").strip())
 
 music_generate_prompt_polish_prompt_template = ChatPromptTemplate.from_template(dedent("""
 # Role

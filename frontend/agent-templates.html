@@ -1,0 +1,366 @@
+<!-- 智能体模板 - 用于弹窗动态加载 -->
+
+<!-- 政策智能问答模板 -->
+<div class="agent-template" id="policy-template" style="display: none;">
+    <div class="agent-intro">
+        <p>政策智能问答智能助手可以回答您关于各类政策法规的问题。请输入您想了解的政策内容，我将为您提供详细的解答。</p>
+    </div>
+    <div class="chat-interaction">
+        <div class="chat-messages" id="policy-chat-messages">
+            <div class="message bot">
+                您好！我是政策问答智能助手，请问有什么可以帮助您的？
+            </div>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="policy-input" placeholder="请输入您的问题...">
+            <button onclick="sendPolicyMessage()">发送</button>
+        </div>
+    </div>
+</div>
+
+<!-- 常规组织生活设计模板 -->
+<div class="agent-template" id="organization-template" style="display: none;">
+    <div class="agent-intro">
+        <p>通过输入主题关键词、活动时长和参与对象，系统将自动生成符合"三会一课"规范的完整组织生活方案。</p>
+    </div>
+    <div class="agent-form">
+        <div class="form-group">
+            <label for="org-theme">主题关键词</label>
+            <input type="text" id="org-theme" placeholder="如：科技创新、纪律教育、爱国教育等">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="org-duration">活动时长</label>
+                <select id="org-duration">
+                    <option value="">请选择</option>
+                    <option value="1小时">1小时</option>
+                    <option value="2小时">2小时</option>
+                    <option value="半天">半天</option>
+                    <option value="全天">全天</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="org-audience">参与对象</label>
+                <select id="org-audience">
+                    <option value="">请选择</option>
+                    <option value="党员">党员</option>
+                    <option value="预备党员">预备党员</option>
+                    <option value="入党积极分子">入党积极分子</option>
+                    <option value="全体师生">全体师生</option>
+                </select>
+            </div>
+        </div>
+        <button class="generate-btn" onclick="generateOrgPlan()">生成组织生活方案</button>
+    </div>
+</div>
+
+<!-- 沉浸式组织生活设计模板 -->
+<div class="agent-template" id="immersive-template" style="display: none;">
+    <div class="agent-intro">
+        <p>"代码长征：重温红色电信史"沉浸式主题党日活动，将编程实践与党史学习深度融合。输入关键词生成活动方案。</p>
+    </div>
+    <div class="agent-form">
+        <div class="form-group">
+            <label for="immersive-keyword">关键词</label>
+            <input type="text" id="immersive-keyword" placeholder="如：代码长征、红色电信、革命精神等">
+        </div>
+        <div class="feature-highlights">
+            <h4>活动特色</h4>
+            <ul>
+                <li>通过编程破解"密电码"</li>
+                <li>完成"信息传递"任务</li>
+                <li>将专业知识与党史结合</li>
+                <li>沉浸式体验革命历程</li>
+            </ul>
+        </div>
+        <button class="generate-btn" onclick="generateImmersivePlan()">生成沉浸式方案</button>
+    </div>
+</div>
+
+<!-- 音乐智能体模板 -->
+<div class="agent-template" id="music-template" style="display: none;">
+    <div class="agent-intro">
+        <p>输入关键词生成红色旋律或推荐经典红歌，支持自动生成提示词和自定义音乐参数。</p>
+    </div>
+    <div class="agent-form">
+        <div class="form-group">
+            <label for="music-keyword">关键词</label>
+            <input type="text" id="music-keyword" placeholder="如：奋斗、青春、革命精神等">
+        </div>
+        <div class="prompt-section">
+            <button class="prompt-btn" onclick="generateMusicPrompt()">
+                <span class="btn-icon">🎲</span>
+                自动生成提示词
+            </button>
+            <div id="generated-prompt" class="generated-prompt"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="music-gender">演唱者</label>
+                <select id="music-gender">
+                    <option value="">不限</option>
+                    <option value="男">男声</option>
+                    <option value="女">女声</option>
+                    <option value="合唱">合唱</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="music-genre">音乐风格</label>
+                <select id="music-genre">
+                    <option value="">不限</option>
+                    <option value="红歌">红歌</option>
+                    <option value="流行">流行</option>
+                    <option value="民谣">民谣</option>
+                    <option value="进行曲">进行曲</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="music-mood">情感色彩</label>
+                <select id="music-mood">
+                    <option value="">不限</option>
+                    <option value="激昂">激昂</option>
+                    <option value="温暖">温暖</option>
+                    <option value="深情">深情</option>
+                    <option value="励志">励志</option>
+                </select>
+            </div>
+        </div>
+        <button class="generate-btn" onclick="generateMusic()">生成音乐</button>
+    </div>
+</div>
+
+<!-- 党史情景生成模板 -->
+<div class="agent-template" id="history-template" style="display: none;">
+    <div class="agent-intro">
+        <p>输入历史事件，AI将生成生动的场景描述，可进一步转化为图文或视频脚本，让党史学习更加形象生动。</p>
+    </div>
+    <div class="agent-form">
+        <div class="form-group">
+            <label for="history-event">历史事件</label>
+            <input type="text" id="history-event" placeholder="如：遵义会议、红军长征、抗日战争等">
+        </div>
+        <div class="feature-highlights">
+            <h4>输出内容</h4>
+            <ul>
+                <li>生动的历史场景描述</li>
+                <li>主要人物介绍</li>
+                <li>历史背景分析</li>
+                <li>视频脚本生成</li>
+            </ul>
+        </div>
+        <button class="generate-btn" onclick="generateHistoryScenario()">生成情景描述</button>
+    </div>
+</div>
+
+<!-- 绘声绘色政策解读模板 -->
+<div class="agent-template" id="policy-visual-template" style="display: none;">
+    <div class="agent-intro">
+        <p>将政策文本转化为易于理解的多媒体形式，让政策解读更加生动有趣。</p>
+    </div>
+    <div class="agent-form">
+        <div class="form-group">
+            <label for="policy-text">政策文本</label>
+            <textarea id="policy-text" rows="6" placeholder="请输入党的二十大报告段落或其他政策文本..."></textarea>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="policy-format">输出格式</label>
+                <select id="policy-format">
+                    <option value="h5">H5图文海报</option>
+                    <option value="video">1分钟短视频脚本</option>
+                    <option value="quiz">互动测试题</option>
+                </select>
+            </div>
+        </div>
+        <div class="format-descriptions">
+            <div class="format-desc" data-format="h5">
+                <strong>H5图文海报：</strong>图文并茂，适合社交媒体传播
+            </div>
+            <div class="format-desc" data-format="video">
+                <strong>短视频脚本：</strong>包含画面描述和配音文案
+            </div>
+            <div class="format-desc" data-format="quiz">
+                <strong>互动测试题：</strong>寓教于乐，加深政策理解
+            </div>
+        </div>
+        <button class="generate-btn" onclick="generatePolicyVisual()">生成解读内容</button>
+    </div>
+</div>
+
+<style>
+/* 智能体弹窗内的样式 */
+.agent-intro {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    border-left: 4px solid #c62828;
+}
+
+.agent-intro p {
+    margin: 0;
+    color: #555;
+    line-height: 1.6;
+}
+
+.agent-form .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.agent-form label {
+    display: block;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.agent-form input,
+.agent-form select,
+.agent-form textarea {
+    width: 100%;
+    padding: 0.8rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+    background: white;
+}
+
+.agent-form input:focus,
+.agent-form select:focus,
+.agent-form textarea:focus {
+    outline: none;
+    border-color: #c62828;
+    box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.1);
+}
+
+.prompt-section {
+    margin: 1.5rem 0;
+}
+
+.generated-prompt {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f0f8ff;
+    border-radius: 8px;
+    border-left: 4px solid #2196f3;
+    color: #1565c0;
+    font-size: 0.9rem;
+}
+
+.feature-highlights {
+    background: #fff3e0;
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1.5rem 0;
+}
+
+.feature-highlights h4 {
+    color: #e65100;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+}
+
+.feature-highlights ul {
+    list-style: none;
+    padding: 0;
+}
+
+.feature-highlights li {
+    padding: 0.3rem 0;
+    color: #666;
+    position: relative;
+    padding-left: 1.2rem;
+}
+
+.feature-highlights li:before {
+    content: "✓";
+    color: #e65100;
+    font-weight: bold;
+    position: absolute;
+    left: 0;
+}
+
+.format-descriptions {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: #f5f5f5;
+    border-radius: 8px;
+}
+
+.format-desc {
+    margin-bottom: 0.5rem;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.format-desc strong {
+    color: #333;
+}
+
+/* 聊天交互样式 */
+.chat-interaction {
+    margin-top: 1rem;
+}
+
+.chat-messages {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 1rem;
+    background: #f9f9f9;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border: 1px solid #e0e0e0;
+}
+
+.message {
+    margin-bottom: 1rem;
+    padding: 0.8rem;
+    border-radius: 8px;
+    max-width: 80%;
+    word-wrap: break-word;
+}
+
+.message.bot {
+    background: #e3f2fd;
+    color: #1565c0;
+    border-bottom-left-radius: 2px;
+}
+
+.message.user {
+    background: #c62828;
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 2px;
+    margin-left: auto;
+    text-align: right;
+}
+
+.chat-input {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 0.8rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.chat-input button {
+    padding: 0.8rem 1.2rem;
+    background: #c62828;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    white-space: nowrap;
+}
+
+.chat-input button:hover {
+    background: #d32f2f;
+}
+</style>
