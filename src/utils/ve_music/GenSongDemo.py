@@ -1,6 +1,6 @@
 import json
 import asyncio
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Coroutine
 
 import aiohttp
 
@@ -30,7 +30,7 @@ async def generate_music_async(
     sk: Optional[str] = None,
     query_interval: float = 5.0,
     verbose: bool = True
-) -> Optional[str]:
+) -> tuple[Any, Any] | None:
     """
     异步生成音乐
 
@@ -175,9 +175,10 @@ async def generate_music_async(
             # 返回音频URL
             if song_detail is not None:
                 audio_url = song_detail.get('AudioUrl')
+                audio_captions = song_detail.get('Captions')
                 if verbose:
                     print(f"===>AudioUrl:{audio_url}")
-                return audio_url
+                return audio_url, audio_captions
             else:
                 return None
 

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>政策问答流式输出测试</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #c62828;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .test-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .test-input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .test-input:focus {
+            outline: none;
+            border-color: #c62828;
+        }
+
+        .test-button {
+            padding: 12px 24px;
+            background: #c62828;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .test-button:hover {
+            background: #d32f2f;
+        }
+
+        .test-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            background: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            max-width: 80%;
+            word-wrap: break-word;
+            line-height: 1.5;
+            animation: messageSlideIn 0.3s ease-out;
+        }
+
+        .message.user {
+            background: #c62828;
+            color: white;
+            align-self: flex-end;
+            text-align: right;
+        }
+
+        .message.bot {
+            background: #e3f2fd;
+            color: #1565c0;
+            align-self: flex-start;
+        }
+
+        .message.streaming {
+            position: relative;
+        }
+
+        .message.streaming::after {
+            content: '▊';
+            display: inline-block;
+            color: #1565c0;
+            animation: cursor 1s infinite;
+            margin-left: 2px;
+        }
+
+        .message.error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #f44336;
+        }
+
+        @keyframes messageSlideIn {
+            0% {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes cursor {
+            0%, 50% {
+                opacity: 1;
+            }
+            51%, 100% {
+                opacity: 0;
+            }
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .status.info {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .status.success {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>政策问答流式输出测试</h1>
+
+        <div class="test-form">
+            <input type="text" class="test-input" id="testInput" placeholder="输入问题测试流式输出..." value="什么是党的群众路线？">
+            <button class="test-button" id="testButton" onclick="testStreaming()">测试流式输出</button>
+        </div>
+
+        <div class="messages" id="messages">
+            <div class="message bot">
+                欢迎测试政策问答流式输出功能！请在上方输入框中输入问题。
+            </div>
+        </div>
+
+        <div class="status info" id="status">
+            准备就绪，可以开始测试
+        </div>
+    </div>
+
+    <script>
+        let messages = [];
+
+        function updateStatus(message, type = 'info') {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+        }
+
+        function addMessage(content, sender, isStreaming = false) {
+            const messagesContainer = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}${isStreaming ? ' streaming' : ''}`;
+            messageDiv.textContent = content;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            if (isStreaming) {
+                return messageDiv;
+            }
+            return null;
+        }
+
+        async function testStreaming() {
+            const input = document.getElementById('testInput');
+            const button = document.getElementById('testButton');
+            const message = input.value.trim();
+
+            if (!message) {
+                updateStatus('请输入问题', 'error');
+                return;
+            }
+
+            // 禁用输入和按钮
+            input.disabled = true;
+            button.disabled = true;
+
+            // 添加用户消息
+            addMessage(message, 'user');
+
+            // 清空输入框
+            input.value = '';
+
+            updateStatus('正在发送请求...', 'info');
+
+            try {
+                // 创建流式响应的消息容器
+                const botMessageDiv = document.createElement('div');
+                botMessageDiv.className = 'message bot streaming';
+
+                const messagesContainer = document.getElementById('messages');
+                messagesContainer.appendChild(botMessageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                let accumulatedText = '';
+
+                updateStatus('正在接收流式响应...', 'info');
+
+                // 发送流式请求
+                const response = await fetch('/policy_agent/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_input: message,
+                        context_messages: []
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                updateStatus('正在解析流式数据...', 'info');
+
+                // 处理流式数据
+                while (true) {
+                    const { done, value } = await reader.read();
+
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+
+                    // 保留最后一个不完整的行
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (line.trim() === '') continue;
+
+                        // 处理SSE格式数据
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6).trim();
+
+                            if (data === '[DONE]') {
+                                // 流结束
+                                botMessageDiv.classList.remove('streaming');
+                                updateStatus('流式输出完成', 'success');
+                                return;
+                            }
+
+                            try {
+                                const parsed = JSON.parse(data);
+                                const content = parsed.content || parsed.choices?.[0]?.delta?.content || '';
+
+                                if (content) {
+                                    accumulatedText += content;
+                                    botMessageDiv.textContent = accumulatedText;
+                                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                                }
+                            } catch (e) {
+                                // 如果不是JSON格式，直接使用原始文本
+                                if (data) {
+                                    accumulatedText += data;
+                                    botMessageDiv.textContent = accumulatedText;
+                                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 处理最后的buffer
+                if (buffer.trim()) {
+                    if (buffer.startsWith('data: ')) {
+                        const data = buffer.slice(6).trim();
+                        if (data !== '[DONE]') {
+                            try {
+                                const parsed = JSON.parse(data);
+                                const content = parsed.content || parsed.choices?.[0]?.delta?.content || '';
+                                if (content) {
+                                    accumulatedText += content;
+                                    botMessageDiv.textContent = accumulatedText;
+                                }
+                            } catch (e) {
+                                if (data) {
+                                    accumulatedText += data;
+                                    botMessageDiv.textContent = accumulatedText;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 流结束
+                botMessageDiv.classList.remove('streaming');
+                updateStatus('流式输出完成', 'success');
+
+            } catch (error) {
+                console.error('流式输出测试失败:', error);
+                addMessage(`错误: ${error.message}`, 'bot error');
+                updateStatus(`测试失败: ${error.message}`, 'error');
+            } finally {
+                // 重新启用输入和按钮
+                input.disabled = false;
+                button.disabled = false;
+                input.focus();
+            }
+        }
+
+        // 回车键发送
+        document.getElementById('testInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !this.disabled) {
+                testStreaming();
+            }
+        });
+
+        // 页面加载完成后聚焦输入框
+        window.addEventListener('load', function() {
+            document.getElementById('testInput').focus();
+        });
+    </script>
+</body>
+</html>

@@ -1182,6 +1182,57 @@ body {
     margin-top: auto;
 }
 
+/* 音乐播放器样式 */
+.music-player {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    border: 1px solid #dee2e6;
+    text-align: center;
+}
+
+.music-player h4 {
+    color: #c62828;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.music-player audio {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
+}
+
+.music-player audio::-webkit-media-controls-panel {
+    background-color: #f8f9fa;
+}
+
+.music-player a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #c62828;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border: 1px solid #c62828;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.music-player a:hover {
+    background: #c62828;
+    color: white;
+    transform: translateY(-1px);
+}
+
+.music-player a::before {
+    content: "⬇";
+    font-size: 1rem;
+}
+
 /* 动画效果 */
 @keyframes spin {
     0% { transform: rotate(0deg); }

@@ -92,40 +92,59 @@
                 <span class="btn-icon">🎲</span>
                 自动生成提示词
             </button>
-            <div id="generated-prompt" class="generated-prompt"></div>
+            <div id="generated-prompt" class="generated-prompt" style="display: none;"></div>
         </div>
         <div class="form-row">
             <div class="form-group">
                 <label for="music-gender">演唱者</label>
                 <select id="music-gender">
                     <option value="">不限</option>
-                    <option value="男">男声</option>
-                    <option value="女">女声</option>
-                    <option value="合唱">合唱</option>
+                    <option value="Male">男声</option>
+                    <option value="Female">女声</option>
                 </select>
             </div>
             <div class="form-group">
                 <label for="music-genre">音乐风格</label>
                 <select id="music-genre">
                     <option value="">不限</option>
-                    <option value="红歌">红歌</option>
-                    <option value="流行">流行</option>
-                    <option value="民谣">民谣</option>
-                    <option value="进行曲">进行曲</option>
+                    <option value="Folk">民谣</option>
+                    <option value="Pop">流行</option>
+                    <option value="Rock">摇滚</option>
+                    <option value="Chinese Style">中国风</option>
+                    <option value="Hip Hop/Rap">嘻哈/说唱</option>
+                    <option value="R&B/Soul">R&B/灵魂乐</option>
+                    <option value="Punk">朋克</option>
+                    <option value="Electronic">电子音乐</option>
+                    <option value="Jazz">爵士</option>
+                    <option value="Reggae">雷鬼</option>
+                    <option value="DJ">DJ舞曲</option>
                 </select>
             </div>
             <div class="form-group">
                 <label for="music-mood">情感色彩</label>
                 <select id="music-mood">
                     <option value="">不限</option>
-                    <option value="激昂">激昂</option>
-                    <option value="温暖">温暖</option>
-                    <option value="深情">深情</option>
-                    <option value="励志">励志</option>
+                    <option value="Happy">欢快</option>
+                    <option value="Dynamic/Energetic">活力/激昂</option>
+                    <option value="Sentimental/Melancholic/Lonely">感性/忧郁/孤独</option>
+                    <option value="Inspirational/Hopeful">励志/希望</option>
+                    <option value="Nostalgic/Memory">怀旧/回忆</option>
+                    <option value="Excited">兴奋</option>
+                    <option value="Sorrow/Sad">悲伤</option>
+                    <option value="Chill">轻松</option>
+                    <option value="Romantic">浪漫</option>
                 </select>
             </div>
         </div>
         <button class="generate-btn" onclick="generateMusic()">生成音乐</button>
+
+        <!-- 音乐试听区域 -->
+        <div id="music-preview" class="music-preview" style="display: none;">
+            <h4>🎵 试听您的音乐作品</h4>
+            <div id="music-player-container">
+                <!-- 动态插入音乐播放器 -->
+            </div>
+        </div>
     </div>
 </div>
 
@@ -311,29 +330,94 @@
     border-radius: 8px;
     margin-bottom: 1rem;
     border: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
 .message {
-    margin-bottom: 1rem;
-    padding: 0.8rem;
+    padding: 0.8rem 1rem;
     border-radius: 8px;
     max-width: 80%;
     word-wrap: break-word;
+    line-height: 1.5;
+    animation: messageSlideIn 0.3s ease-out;
 }
 
 .message.bot {
     background: #e3f2fd;
     color: #1565c0;
     border-bottom-left-radius: 2px;
+    align-self: flex-start;
 }
 
 .message.user {
     background: #c62828;
     color: white;
-    align-self: flex-end;
     border-bottom-right-radius: 2px;
-    margin-left: auto;
+    align-self: flex-end;
     text-align: right;
+}
+
+.message.streaming {
+    position: relative;
+    overflow: hidden;
+}
+
+.message.streaming::after {
+    content: '▊';
+    display: inline-block;
+    color: #1565c0;
+    animation: cursor 1s infinite;
+    margin-left: 2px;
+    font-size: 1.1em;
+}
+
+.message.error {
+    background: #ffebee;
+    color: #c62828;
+    border-left: 4px solid #f44336;
+}
+
+.thinking-indicator {
+    display: inline-block;
+}
+
+.thinking-dots {
+    display: inline-block;
+    animation: thinking 1.5s infinite;
+}
+
+@keyframes messageSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes cursor {
+    0%, 50% {
+        opacity: 1;
+    }
+    51%, 100% {
+        opacity: 0;
+    }
+}
+
+@keyframes thinking {
+    0% {
+        content: '.';
+    }
+    33% {
+        content: '..';
+    }
+    66% {
+        content: '...';
+    }
 }
 
 .chat-input {
@@ -362,5 +446,233 @@
 
 .chat-input button:hover {
     background: #d32f2f;
+}
+
+/* 音频播放器增强样式 */
+.audio-enhanced {
+    width: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    margin: 20px 0;
+}
+
+.audio-enhanced .audio-info {
+    color: white;
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.audio-enhanced audio {
+    width: 100%;
+    height: 60px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    outline: none;
+}
+
+/* 自定义音频播放器样式 */
+.audio-enhanced audio::-webkit-media-controls-panel {
+    display: none !important; /* 隐藏原生控件 */
+}
+
+.audio-enhanced .custom-audio-player {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+}
+
+.audio-enhanced .play-pause-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #c62828 0%, #d32f2f 100%);
+    border: none;
+    color: white;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(198, 40, 40, 0.3);
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.audio-enhanced .play-pause-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(198, 40, 40, 0.4);
+}
+
+.audio-enhanced .audio-timeline {
+    flex: 1;
+    position: relative;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.audio-enhanced .audio-progress {
+    height: 100%;
+    background: linear-gradient(90deg, #c62828, #ff6b6b);
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.1s linear;
+}
+
+.audio-enhanced .audio-thumb {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    background: white;
+    border: 2px solid #c62828;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+}
+
+.audio-enhanced .audio-time {
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    min-width: 45px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.audio-enhanced .volume-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.audio-enhanced .volume-slider {
+    width: 60px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    position: relative;
+    cursor: pointer;
+}
+
+.audio-enhanced .volume-progress {
+    height: 100%;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 2px;
+    width: 70%;
+}
+
+.audio-enhanced .volume-thumb {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    background: white;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+}
+
+.audio-enhanced .volume-icon {
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+/* Firefox浏览器兼容 */
+.audio-enhanced audio::-moz-range-track {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 4px !important;
+}
+
+.audio-enhanced audio::-moz-range-progress {
+    background: linear-gradient(90deg, #667eea, #764ba2) !important;
+    border-radius: 4px !important;
+}
+
+.audio-enhanced audio::-moz-range-thumb {
+    background: white !important;
+    border: 2px solid #667eea !important;
+    border-radius: 50% !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* 动画定义 */
+@keyframes fadeInScale {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+@keyframes fadeOutScale {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+}
+
+@keyframes slideIn {
+    0% {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* 音乐试听区域样式 */
+.music-preview {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.music-preview h4 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+#music-player-container {
+    width: 100%;
+}
+
+/* 淡入动画 */
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 </style>

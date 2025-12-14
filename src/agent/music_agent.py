@@ -32,9 +32,10 @@ class MusicAgent:
     async def polish_prompt(self, old_prompt: str):
         pass
 
-    async def generate_music(self, prompt: str=None, gender: str=None, genre: str=None, mood: str=None) -> str:
-        music_url = await generate_music_async(prompt, gender, genre, mood)
-        return music_url
+    async def generate_music(self, prompt: str=None, gender: str=None, genre: str=None, mood: str=None) -> tuple[str, dict]:
+        # return "https://v9-default.douyinvod.com/d2732d659c7ec48dc0bbcc59c0075eb6/6b1ea041/video/tos/cn/tos-cn-v-bfc035/ooBInAgAEFTgfPAgIBGDCHh7Wb2Axpp6YAKfBI/?a=7518&ch=0&cr=3&dr=0&er=0&cd=0%7C0%7C0%7C3&br=1378&bt=1378&ds=5&ft=GwL5G6EEBBkq8ZmoAMrIU_vjVQWw&mime_type=audio_wav&qs=13&rc=M2c2NG45cmtwNzczNDNoM0BpM2c2NG45cmtwNzczNDNoM0Bkb15sMmRzbHJhLS1kNC9zYSNkb15sMmRzbHJhLS1kNC9zcw%3D%3D&btag=80000e00028000&dy_q=1765633096&l=02176563307458200000000000000000000ffff0a843ad9425c30"
+        music_url, audio_captions = await generate_music_async(prompt, gender, genre, mood)
+        return music_url, audio_captions
 
 
 if __name__ == "__main__":

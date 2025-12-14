@@ -363,42 +363,132 @@ async function sendPolicyMessage() {
     // 显示思考中的消息
     const thinkingMessage = document.createElement('div');
     thinkingMessage.className = 'message bot';
-    thinkingMessage.textContent = '正在思考中...';
+    thinkingMessage.innerHTML = '<span class="thinking-indicator">正在思考中<span class="thinking-dots">...</span></span>';
     messages.appendChild(thinkingMessage);
 
     // 滚动到底部
     messages.scrollTop = messages.scrollHeight;
 
     try {
-        // 模拟API调用（这里需要根据实际后端接口调整）
-        const response = await fetch('/api/policy/chat', {
+        // 创建流式响应的消息容器
+        const botMessageContainer = document.createElement('div');
+        botMessageContainer.className = 'message bot streaming';
+        botMessageContainer.innerHTML = '';
+        messages.insertBefore(botMessageContainer, thinkingMessage);
+
+        // 移除思考中的消息
+        messages.removeChild(thinkingMessage);
+
+        // 准备请求数据
+        const requestData = {
+            user_input: message,
+            context_messages: []
+        };
+
+        // 发送流式请求
+        const response = await fetch('/policy_agent/ask', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ message: message })
+            body: JSON.stringify(requestData)
         });
 
-        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-        // 移除思考中的消息
-        messages.removeChild(thinkingMessage);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let accumulatedText = '';
 
-        // 添加机器人回复
-        const botMessage = document.createElement('div');
-        botMessage.className = 'message bot';
-        botMessage.textContent = data.response || '抱歉，我暂时无法回答这个问题。';
-        messages.appendChild(botMessage);
+        // 处理流式数据
+        while (true) {
+            const { done, value } = await reader.read();
+
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+
+            // 保留最后一个不完整的行
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (line.trim() === '') continue;
+
+                // 处理SSE格式数据
+                if (line.startsWith('data: ')) {
+                    const data = line.slice(6).trim();
+
+                    if (data === '[DONE]') {
+                        // 流结束，移除streaming类
+                        botMessageContainer.classList.remove('streaming');
+                        return;
+                    }
+
+                    try {
+                        const parsed = JSON.parse(data);
+                        const content = parsed.content || parsed.choices?.[0]?.delta?.content || '';
+
+                        if (content) {
+                            accumulatedText += content;
+                            botMessageContainer.innerHTML = accumulatedText;
+                            messages.scrollTop = messages.scrollHeight;
+                        }
+                    } catch (e) {
+                        // 如果不是JSON格式，直接使用原始文本
+                        if (data) {
+                            accumulatedText += data;
+                            botMessageContainer.innerHTML = accumulatedText;
+                            messages.scrollTop = messages.scrollHeight;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 处理最后的buffer
+        if (buffer.trim()) {
+            if (buffer.startsWith('data: ')) {
+                const data = buffer.slice(6).trim();
+                if (data !== '[DONE]') {
+                    try {
+                        const parsed = JSON.parse(data);
+                        const content = parsed.content || parsed.choices?.[0]?.delta?.content || '';
+                        if (content) {
+                            accumulatedText += content;
+                            botMessageContainer.innerHTML = accumulatedText;
+                        }
+                    } catch (e) {
+                        if (data) {
+                            accumulatedText += data;
+                            botMessageContainer.innerHTML = accumulatedText;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 流结束，移除streaming类
+        botMessageContainer.classList.remove('streaming');
 
     } catch (error) {
         console.error('政策问答错误:', error);
 
-        // 移除思考中的消息
-        messages.removeChild(thinkingMessage);
+        // 移除思考中的消息和可能的streaming消息
+        const streamingMessage = messages.querySelector('.message.streaming');
+        if (streamingMessage && streamingMessage.parentNode) {
+            streamingMessage.parentNode.removeChild(streamingMessage);
+        }
+        if (thinkingMessage.parentNode) {
+            messages.removeChild(thinkingMessage);
+        }
 
         // 添加错误消息
         const errorMessage = document.createElement('div');
-        errorMessage.className = 'message bot';
+        errorMessage.className = 'message bot error';
         errorMessage.textContent = '抱歉，网络连接出现问题，请稍后重试。';
         messages.appendChild(errorMessage);
     }
@@ -505,13 +595,21 @@ async function generateMusicPrompt() {
         const data = await response.json();
 
         if (data.prompt) {
-            promptDiv.textContent = data.prompt;
-            promptDiv.classList.add('show');
-
             // 将生成的提示词填入关键词输入框
             document.getElementById('music-keyword').value = data.prompt;
+
+            // 填充其他参数到对应的表单字段
+            if (data.gender) {
+                document.getElementById('music-gender').value = data.gender;
+            }
+            if (data.genre) {
+                document.getElementById('music-genre').value = data.genre;
+            }
+            if (data.mood) {
+                document.getElementById('music-mood').value = data.mood;
+            }
         } else {
-            alert('生成提示词失败');
+            alert('生成提示词失败，请重试');
         }
 
     } catch (error) {
@@ -556,25 +654,158 @@ async function generateMusic() {
         const data = await response.json();
         hideLoading();
 
+        // 映射英文到中文显示
+        const genderMap = {
+            'Male': '男声',
+            'Female': '女声'
+        };
+
+        const genreMap = {
+            'Folk': '民谣',
+            'Pop': '流行',
+            'Rock': '摇滚',
+            'Chinese Style': '中国风',
+            'Hip Hop/Rap': '嘻哈/说唱',
+            'R&B/Soul': 'R&B/灵魂乐',
+            'Punk': '朋克',
+            'Electronic': '电子音乐',
+            'Jazz': '爵士',
+            'Reggae': '雷鬼',
+            'DJ': 'DJ舞曲'
+        };
+
+        const moodMap = {
+            'Happy': '欢快',
+            'Dynamic/Energetic': '活力/激昂',
+            'Sentimental/Melancholic/Lonely': '感性/忧郁/孤独',
+            'Inspirational/Hopeful': '励志/希望',
+            'Nostalgic/Memory': '怀旧/回忆',
+            'Excited': '兴奋',
+            'Sorrow/Sad': '悲伤',
+            'Chill': '轻松',
+            'Romantic': '浪漫'
+        };
+
         if (data.music_url) {
-            const content = `
-                <p><strong>生成提示词：</strong>${prompt}</p>
-                <p><strong>音乐参数：</strong></p>
-                <ul>
-                    <li>性别：${gender || '默认'}</li>
-                    <li>风格：${genre || '默认'}</li>
-                    <li>情绪：${mood || '默认'}</li>
-                </ul>
-                <div class="music-player">
-                    <h4>生成的音乐</h4>
-                    <audio controls style="width: 100%;">
-                        <source src="${data.music_url}" type="audio/mpeg">
-                        您的浏览器不支持音频播放。
-                    </audio>
-                    <p><a href="${data.music_url}" target="_blank" download>下载音乐文件</a></p>
-                </div>
-            `;
-            showResult('音乐生成结果', content);
+            // 在音乐智能体弹窗中显示播放器
+            const musicPreview = document.getElementById('music-preview');
+            const musicPlayerContainer = document.getElementById('music-player-container');
+
+            if (musicPreview && musicPlayerContainer) {
+                // 显示音乐播放器和歌词
+                musicPlayerContainer.innerHTML = `
+                    <div class="audio-enhanced">
+                        <div class="audio-info">🎵 您生成的红色主题音乐</div>
+                        <div id="loading-cache" style="text-align: center; color: white; padding: 20px;">
+                            <div style="font-size: 1.1rem; margin-bottom: 10px;">🔄 正在缓存音频文件...</div>
+                            <div style="font-size: 0.9rem; opacity: 0.8;">这可能需要几秒钟时间</div>
+                        </div>
+                        <div id="audio-player" style="display: none;">
+                            <!-- 隐藏的原生音频元素 -->
+                            <audio preload="auto" id="music-audio-element"></audio>
+
+                            <!-- 自定义音频播放器 -->
+                            <div class="custom-audio-player">
+                                <button class="play-pause-btn" id="play-pause-btn">
+                                    <span id="play-icon">▶</span>
+                                </button>
+
+                                <div class="audio-time" id="current-time">0:00</div>
+
+                                <div class="audio-timeline" id="audio-timeline">
+                                    <div class="audio-progress" id="audio-progress">
+                                        <div class="audio-thumb" id="audio-thumb"></div>
+                                    </div>
+                                </div>
+
+                                <div class="audio-time" id="duration">0:00</div>
+
+                                <div class="volume-control">
+                                    <span class="volume-icon" id="volume-icon">🔊</span>
+                                    <div class="volume-slider" id="volume-slider">
+                                        <div class="volume-progress"></div>
+                                        <div class="volume-thumb"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 15px;">
+                                <a href="${data.music_url}" target="_blank" download style="
+                                    background: rgba(255, 255, 255, 0.2);
+                                    color: white;
+                                    padding: 0.6rem 1.2rem;
+                                    text-decoration: none;
+                                    border-radius: 8px;
+                                    font-size: 0.9rem;
+                                    border: 1px solid rgba(255, 255, 255, 0.3);
+                                    transition: all 0.3s ease;
+                                " onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'"
+                                   onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                                    📥 下载音乐
+                                </a>
+                                <button onclick="copyLyrics()" style="
+                                    background: rgba(255, 255, 255, 0.2);
+                                    color: white;
+                                    border: 1px solid rgba(255, 255, 255, 0.3);
+                                    padding: 0.6rem 1.2rem;
+                                    border-radius: 8px;
+                                    cursor: pointer;
+                                    font-size: 0.9rem;
+                                    transition: all 0.3s ease;
+                                " onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'"
+                                   onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                                    📝 复制歌词
+                                </button>
+                            </div>
+                        </div>
+                        <div id="lyrics-container" style="display: none; margin-top: 1.5rem; padding: 1rem; background: rgba(0, 0, 0, 0.3); border-radius: 8px;">
+                            <h5 style="color: white; margin-bottom: 1rem; text-align: center;">🎤 歌词</h5>
+                            <div id="lyrics-scroll" style="max-height: 200px; overflow-y: auto; padding: 0 10px;">
+                                <div id="lyrics-content" style="color: white; line-height: 1.6; font-size: 0.9rem;">
+                                    <!-- 歌词将在这里显示 -->
+                                </div>
+                            </div>
+                        </div>
+                        <div id="cache-status" style="margin-top: 10px; color: white; text-align: center; font-size: 0.8rem; opacity: 0.8;">
+                            💾 音频已缓存到服务器，可无限次播放
+                        </div>
+                    </div>
+                `;
+                musicPreview.style.display = 'block';
+
+                // 直接显示本地缓存的音频和歌词
+                displayLocalCachedAudio(data.music_url, data.audio_captions);
+            }
+
+            // 显示成功提示（非阻塞式，屏幕正中间）
+            setTimeout(() => {
+                const tempAlert = document.createElement('div');
+                tempAlert.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: #4caf50;
+                    color: white;
+                    padding: 1.2rem 2rem;
+                    border-radius: 12px;
+                    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+                    z-index: 10000;
+                    font-size: 1.1rem;
+                    font-weight: 600;
+                    animation: fadeInScale 0.4s ease-out;
+                `;
+                tempAlert.textContent = '🎵 音乐生成成功！正在缓存音频...';
+                document.body.appendChild(tempAlert);
+
+                setTimeout(() => {
+                    tempAlert.style.animation = 'fadeOutScale 0.3s ease-out';
+                    setTimeout(() => {
+                        tempAlert.remove();
+                    }, 300);
+                }, 2000);
+            }, 100);
+
         } else {
             alert('生成失败：' + (data.error || '未知错误'));
         }
@@ -583,6 +814,795 @@ async function generateMusic() {
         hideLoading();
         console.error('生成音乐错误:', error);
         alert('网络错误，请稍后重试');
+    }
+}
+
+// 显示本地缓存的音频（后端已处理缓存）
+function displayLocalCachedAudio(audioUrl, audioCaptions) {
+    console.log('显示本地缓存的音频:', audioUrl);
+
+    // 更新UI显示音频播放器
+    const loadingDiv = document.getElementById('loading-cache');
+    const audioPlayerDiv = document.getElementById('audio-player');
+    const lyricsContainer = document.getElementById('lyrics-container');
+    const cacheStatusDiv = document.getElementById('cache-status');
+
+    if (loadingDiv) loadingDiv.style.display = 'none';
+    if (audioPlayerDiv) {
+        audioPlayerDiv.style.display = 'block';
+        const audioElement = document.getElementById('music-audio-element');
+        if (audioElement) {
+            audioElement.src = audioUrl;
+            audioElement.preload = 'auto';
+
+            // 设置自定义播放器
+            setupCustomAudioPlayer();
+        }
+    }
+    if (cacheStatusDiv) {
+        cacheStatusDiv.textContent = '💾 音频已缓存到服务器，可无限次播放';
+        cacheStatusDiv.style.color = '#4caf50';
+        cacheStatusDiv.fontWeight = 'bold';
+    }
+
+    // 处理和显示歌词
+    if (audioCaptions && lyricsContainer) {
+        displayLyrics(audioCaptions);
+        lyricsContainer.style.display = 'block';
+    }
+
+    // 显示加载成功提示
+    const successToast = document.createElement('div');
+    successToast.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #4caf50;
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        z-index: 10001;
+        font-size: 1rem;
+        animation: fadeInScale 0.4s ease-out;
+    `;
+    successToast.textContent = '✅ 音乐生成成功！可以开始播放';
+    document.body.appendChild(successToast);
+
+    setTimeout(() => {
+        successToast.style.animation = 'fadeOutScale 0.3s ease-out';
+        setTimeout(() => {
+            successToast.remove();
+        }, 300);
+    }, 2000);
+}
+
+// 设置自定义音频播放器
+function setupCustomAudioPlayer() {
+    const audio = document.getElementById('music-audio-element');
+    const playPauseBtn = document.getElementById('play-pause-btn');
+    const playIcon = document.getElementById('play-icon');
+    const currentTimeEl = document.getElementById('current-time');
+    const durationEl = document.getElementById('duration');
+    const timeline = document.getElementById('audio-timeline');
+    const progress = document.getElementById('audio-progress');
+    const thumb = document.getElementById('audio-thumb');
+
+    if (!audio || !playPauseBtn) return;
+
+    let isDragging = false;
+
+    // 播放/暂停功能
+    playPauseBtn.addEventListener('click', () => {
+        if (audio.paused) {
+            audio.play();
+            playIcon.textContent = '⏸';
+        } else {
+            audio.pause();
+            playIcon.textContent = '▶';
+        }
+    });
+
+    // 更新时间显示
+    function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // 音频元数据加载完成
+    audio.addEventListener('loadedmetadata', () => {
+        durationEl.textContent = formatTime(audio.duration);
+    });
+
+    // 更新进度条
+    audio.addEventListener('timeupdate', () => {
+        const current = audio.currentTime;
+        const duration = audio.duration;
+
+        if (!isNaN(duration)) {
+            const progressPercent = (current / duration) * 100;
+            progress.style.width = progressPercent + '%';
+            thumb.style.left = progressPercent + '%';
+            currentTimeEl.textContent = formatTime(current);
+        }
+    });
+
+    // 音频结束
+    audio.addEventListener('ended', () => {
+        playIcon.textContent = '▶';
+        progress.style.width = '0%';
+        thumb.style.left = '0%';
+        currentTimeEl.textContent = '0:00';
+    });
+
+    // 进度条点击跳转
+    timeline.addEventListener('click', (e) => {
+        const rect = timeline.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const percent = clickX / rect.width;
+
+        if (!isNaN(audio.duration)) {
+            audio.currentTime = percent * audio.duration;
+        }
+    });
+
+    // 拖动进度条
+    timeline.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        // 记住当前播放状态
+        audio.dataset.wasPlaying = !audio.paused;
+        updateProgressFromMouse(e);
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+            updateProgressFromMouse(e);
+        }
+    });
+
+    document.addEventListener('mouseup', (e) => {
+        if (isDragging) {
+            isDragging = false;
+            const rect = timeline.getBoundingClientRect();
+            const mousePercent = (e.clientX - rect.left) / rect.width;
+            if (!isNaN(audio.duration)) {
+                audio.currentTime = mousePercent * audio.duration;
+            }
+
+            // 如果之前在播放，继续播放
+            if (audio.dataset.wasPlaying === 'true') {
+                audio.play().catch(err => console.log('自动播放失败:', err));
+            }
+            delete audio.dataset.wasPlaying;
+        }
+    });
+
+    function updateProgressFromMouse(e) {
+        const rect = timeline.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const percent = Math.max(0, Math.min(1, clickX / rect.width));
+
+        progress.style.width = (percent * 100) + '%';
+        thumb.style.left = (percent * 100) + '%';
+
+        if (!isNaN(audio.duration)) {
+            currentTimeEl.textContent = formatTime(percent * audio.duration);
+        }
+    }
+
+    // 音量控制
+    const volumeIcon = document.getElementById('volume-icon');
+    const volumeSlider = document.getElementById('volume-slider');
+    const volumeProgress = volumeSlider ? volumeSlider.querySelector('.volume-progress') : null;
+    const volumeThumb = volumeSlider ? volumeSlider.querySelector('.volume-thumb') : null;
+
+    if (volumeSlider && volumeProgress && volumeThumb) {
+        let isDraggingVolume = false;
+
+        function updateVolume(percent) {
+            const volume = Math.max(0, Math.min(1, percent));
+            audio.volume = volume;
+            volumeProgress.style.width = (volume * 100) + '%';
+            volumeThumb.style.left = (volume * 100) + '%';
+
+            // 更新音量图标
+            if (volume === 0 || audio.muted) {
+                volumeIcon.textContent = '🔇';
+            } else if (volume < 0.5) {
+                volumeIcon.textContent = '🔉';
+            } else {
+                volumeIcon.textContent = '🔊';
+            }
+        }
+
+        function updateVolumeFromMouse(e) {
+            const rect = volumeSlider.getBoundingClientRect();
+            const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            updateVolume(percent);
+        }
+
+        // 音量滑块拖拽功能
+        volumeSlider.addEventListener('mousedown', (e) => {
+            isDraggingVolume = true;
+            updateVolumeFromMouse(e);
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDraggingVolume) {
+                updateVolumeFromMouse(e);
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDraggingVolume = false;
+        });
+
+        volumeSlider.addEventListener('click', (e) => {
+            if (!isDraggingVolume) {
+                updateVolumeFromMouse(e);
+            }
+        });
+
+        volumeIcon.addEventListener('click', () => {
+            if (audio.muted) {
+                audio.muted = false;
+                updateVolume(audio.volume);
+            } else {
+                audio.muted = true;
+                volumeProgress.style.width = '0%';
+                volumeThumb.style.left = '0%';
+                volumeIcon.textContent = '🔇';
+            }
+        });
+
+        // 初始化音量
+        updateVolume(audio.volume);
+    }
+}
+
+// 显示歌词
+function displayLyrics(audioCaptions) {
+    try {
+        // 解析歌词数据
+        const captionsData = typeof audioCaptions === 'string' ? JSON.parse(audioCaptions) : audioCaptions;
+
+        if (captionsData.utterances && captionsData.utterances.length > 0) {
+            const lyricsContent = document.getElementById('lyrics-content');
+            if (!lyricsContent) return;
+
+            // 过滤掉音乐标记（如[intro]、[verse]等），只保留歌词文本
+            // 同时保留原始索引用于同步
+            const lyricsLines = [];
+            const lyricsMap = []; // 存储歌词行在原始utterances中的索引
+
+            captionsData.utterances.forEach((utterance, originalIndex) => {
+                const text = utterance.text || '';
+                // 过滤掉方括号中的音乐标记
+                if (text && !text.match(/^\[.*\]$/)) {
+                    lyricsLines.push({
+                        text: text,
+                        startTime: utterance.start_time || utterance.startTime,
+                        endTime: utterance.end_time || utterance.endTime,
+                        originalIndex: originalIndex
+                    });
+                }
+            });
+
+            // 生成歌词HTML，使用原始索引
+            let lyricsHtml = '';
+            lyricsLines.forEach((line, index) => {
+                if (line.text.trim()) {
+                    lyricsHtml += `<div class="lyric-line" data-original-index="${line.originalIndex}" data-start-time="${line.startTime}" data-end-time="${line.endTime}" style="
+                        padding: 6px 12px;
+                        margin: 3px 0;
+                        border-radius: 6px;
+                        transition: all 0.3s ease;
+                        cursor: default;
+                        text-align: center;
+                        font-size: 0.95rem;
+                        opacity: 0.6;
+                    ">${line.text}</div>`;
+                }
+            });
+
+            if (lyricsHtml) {
+                lyricsContent.innerHTML = lyricsHtml;
+
+                // 存储歌词到全局变量，供复制功能使用
+                window.currentLyrics = lyricsLines.map(line => line.text).join('\n');
+
+                // 添加歌词高亮功能
+                const audioElement = document.getElementById('music-audio-element');
+                if (audioElement && captionsData.duration) {
+                    setupLyricsSync(audioElement, lyricsLines);
+                }
+            } else {
+                lyricsContent.innerHTML = '<div style="text-align: center; opacity: 0.7;">暂无歌词</div>';
+                window.currentLyrics = '';
+            }
+        } else {
+            const lyricsContent = document.getElementById('lyrics-content');
+            if (lyricsContent) {
+                lyricsContent.innerHTML = '<div style="text-align: center; opacity: 0.7;">暂无歌词</div>';
+            }
+        }
+    } catch (error) {
+        console.error('解析歌词数据失败:', error);
+        const lyricsContent = document.getElementById('lyrics-content');
+        if (lyricsContent) {
+            lyricsContent.innerHTML = '<div style="text-align: center; opacity: 0.7;">歌词解析失败</div>';
+        }
+    }
+}
+
+// 设置歌词同步功能
+function setupLyricsSync(audioElement, lyricsLines) {
+    if (!audioElement || !lyricsLines || lyricsLines.length === 0) return;
+
+    // 监听音频播放事件
+    audioElement.addEventListener('timeupdate', function() {
+        const currentTime = this.currentTime * 1000; // 转换为毫秒
+
+        // 找到当前应该高亮的歌词
+        let activeIndex = -1;
+        for (let i = lyricsLines.length - 1; i >= 0; i--) {
+            const lyric = lyricsLines[i];
+            if (lyric.startTime <= currentTime && currentTime <= lyric.endTime) {
+                activeIndex = i;
+                break;
+            }
+        }
+
+        // 更新歌词高亮
+        const lyricLines_dom = document.querySelectorAll('.lyric-line');
+        lyricLines_dom.forEach((line, index) => {
+            if (index === activeIndex) {
+                line.style.background = 'rgba(76, 175, 80, 0.3)';
+                line.style.color = '#4caf50';
+                line.style.transform = 'scale(1.02)';
+                line.style.opacity = '1';
+
+                // 滚动到当前歌词，居中显示
+                const lyricsScroll = document.getElementById('lyrics-scroll');
+                if (lyricsScroll) {
+                    const scrollPosition = line.offsetTop - lyricsScroll.offsetTop - (lyricsScroll.offsetHeight / 2) + (line.offsetHeight / 2);
+
+                    lyricsScroll.scrollTo({
+                        top: scrollPosition,
+                        behavior: 'smooth'
+                    });
+                }
+            } else {
+                line.style.background = 'transparent';
+                line.style.color = 'white';
+                line.style.transform = 'scale(1)';
+                line.style.opacity = '0.6';
+            }
+        });
+    });
+
+    // 音频结束时清除高亮
+    audioElement.addEventListener('ended', function() {
+        const lyricLines_dom = document.querySelectorAll('.lyric-line');
+        lyricLines_dom.forEach(line => {
+            line.style.background = 'transparent';
+            line.style.color = 'white';
+            line.style.transform = 'scale(1)';
+            line.style.opacity = '0.6';
+        });
+    });
+}
+
+// 复制歌词函数
+function copyLyrics() {
+    const lyricsText = window.currentLyrics || '';
+
+    if (!lyricsText.trim()) {
+        // 显示提示信息
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #ff9800;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            z-index: 10001;
+            font-size: 1rem;
+            animation: fadeInScale 0.4s ease-out;
+        `;
+        toast.textContent = '⚠️ 没有可复制的歌词';
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.animation = 'fadeOutScale 0.3s ease-out';
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
+        }, 2000);
+        return;
+    }
+
+    // 优先尝试使用降级方案，因为更稳定
+    const textArea = document.createElement('textarea');
+    textArea.value = lyricsText;
+    textArea.style.position = 'fixed';
+    textArea.style.opacity = '0';
+    textArea.style.left = '-9999px';
+    textArea.style.top = '0';
+    textArea.readOnly = true;
+    document.body.appendChild(textArea);
+
+    textArea.select();
+    textArea.setSelectionRange(0, 999999);
+
+    try {
+        const copySuccess = document.execCommand('copy');
+        document.body.removeChild(textArea);
+
+        if (copySuccess) {
+            // 显示复制成功提示
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: #4caf50;
+                color: white;
+                padding: 1rem 1.5rem;
+                border-radius: 8px;
+                z-index: 10001;
+                font-size: 1rem;
+                animation: fadeInScale 0.4s ease-out;
+            `;
+            toast.textContent = '📝 歌词已复制到剪贴板';
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'fadeOutScale 0.3s ease-out';
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 2000);
+        } else {
+            throw new Error('execCommand failed');
+        }
+    } catch (err) {
+        console.error('降级复制失败:', err);
+
+        // 尝试使用现代 Clipboard API（如果可用）
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(lyricsText).then(() => {
+                // 显示复制成功提示
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: #4caf50;
+                    color: white;
+                    padding: 1rem 1.5rem;
+                    border-radius: 8px;
+                    z-index: 10001;
+                    font-size: 1rem;
+                    animation: fadeInScale 0.4s ease-out;
+                `;
+                toast.textContent = '📝 歌词已复制到剪贴板';
+                document.body.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.style.animation = 'fadeOutScale 0.3s ease-out';
+                    setTimeout(() => {
+                        toast.remove();
+                    }, 300);
+                }, 2000);
+            }).catch(clipboardErr => {
+                console.error('Clipboard API 也失败:', clipboardErr);
+                showCopyErrorMessage(lyricsText);
+            });
+        } else {
+            showCopyErrorMessage(lyricsText);
+        }
+    }
+}
+
+// 显示复制错误信息和手动复制选项
+function showCopyErrorMessage(lyricsText) {
+    // 创建错误提示对话框
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        color: #333;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        z-index: 10002;
+        font-size: 1rem;
+        max-width: 80%;
+        max-height: 70%;
+        overflow-y: auto;
+        animation: fadeInScale 0.4s ease-out;
+    `;
+
+    dialog.innerHTML = `
+        <h3 style="margin-top: 0; color: #ff5722;">❌ 复制失败</h3>
+        <p style="margin-bottom: 1rem;">自动复制不可用，请手动选择以下歌词进行复制：</p>
+        <textarea readonly style="
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+        " onclick="this.select(); this.setSelectionRange(0, 999999);">${lyricsText}</textarea>
+        <div style="margin-top: 1rem; text-align: center;">
+            <button onclick="this.parentElement.parentElement.remove();" style="
+                background: #4caf50;
+                color: white;
+                border: none;
+                padding: 0.8rem 2rem;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 1rem;
+                margin-right: 1rem;
+            ">关闭</button>
+        </div>
+        <p style="margin-top: 1rem; font-size: 0.9rem; color: #666; font-style: italic;">
+            提示：点击文本区域会自动选中全部歌词，然后按 Ctrl+C (Windows) 或 Cmd+C (Mac) 复制
+        </p>
+    `;
+
+    document.body.appendChild(dialog);
+
+    // 点击背景关闭对话框
+    dialog.addEventListener('click', function(e) {
+        if (e.target === dialog) {
+            dialog.remove();
+        }
+    });
+
+    // 自动选中文本
+    const textarea = dialog.querySelector('textarea');
+    if (textarea) {
+        setTimeout(() => {
+            textarea.focus();
+            textarea.select();
+            textarea.setSelectionRange(0, 999999);
+        }, 100);
+    }
+}
+
+// 修复音频播放功能 - 直接使用fetch获取音频数据绕过Referer检查
+async function loadAudioWithHeaders(originalUrl) {
+    try {
+        showLoading();
+        const errorMessage = document.getElementById('audio-error-message');
+        const audioElement = document.getElementById('music-audio-element');
+
+        console.log('尝试直接获取音频数据:', originalUrl);
+
+        // 使用fetch直接获取音频数据，绕过audio标签的Referer限制
+        const response = await fetch(originalUrl, {
+            method: 'GET',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'audio/webm,audio/ogg,audio/wav,audio/mp3,audio/mpeg,*/*;q=0.9',
+                'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache',
+                'Range': 'bytes=0-5000000' // 先获取前5MB
+            },
+            mode: 'cors',
+            credentials: 'omit'
+        });
+
+        console.log('响应状态:', response.status, response.statusText);
+
+        if (response.ok) {
+            // 将响应转换为blob
+            const audioBlob = await response.blob();
+            console.log('音频Blob大小:', audioBlob.size, '类型:', audioBlob.type);
+
+            const blobUrl = URL.createObjectURL(audioBlob);
+            console.log('创建的Blob URL:', blobUrl);
+
+            // 更新音频元素
+            if (audioElement) {
+                // 停止当前播放
+                audioElement.pause();
+                audioElement.currentTime = 0;
+
+                // 创建新的source元素，使用blob URL
+                const newSource = document.createElement('source');
+                newSource.src = blobUrl;
+                newSource.type = audioBlob.type || 'audio/mpeg';
+
+                // 替换所有source元素
+                audioElement.innerHTML = '';
+                audioElement.appendChild(newSource);
+
+                // 重新加载音频
+                audioElement.load();
+
+                // 尝试自动播放（某些浏览器可能需要用户交互）
+                audioElement.play().catch(e => {
+                    console.log('自动播放失败，需要用户手动点击播放:', e);
+                });
+
+                // 隐藏错误消息
+                if (errorMessage) {
+                    errorMessage.style.display = 'none';
+                }
+
+                // 显示成功提示
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: #4caf50;
+                    color: white;
+                    padding: 1rem 1.5rem;
+                    border-radius: 8px;
+                    z-index: 10001;
+                    font-size: 1rem;
+                `;
+                toast.textContent = '🎵 播放问题已修复！音频已加载';
+                document.body.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000);
+            }
+        } else {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+    } catch (error) {
+        console.error('直接获取音频失败:', error);
+
+        // 尝试备选方案：创建隐藏的iframe来"清洁"Referer
+        try {
+            await loadAudioViaIframe(originalUrl);
+        } catch (iframeError) {
+            console.error('iframe方案也失败:', iframeError);
+            alert('音频播放修复失败，请直接下载音乐文件');
+        }
+    } finally {
+        hideLoading();
+    }
+}
+
+// 备选方案：使用iframe绕过Referer检查
+async function loadAudioViaIframe(originalUrl) {
+    return new Promise((resolve, reject) => {
+        console.log('尝试iframe方案:', originalUrl);
+
+        // 创建隐藏的iframe
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = 'about:blank';
+
+        document.body.appendChild(iframe);
+
+        // 在iframe中加载音频
+        iframe.onload = function() {
+            try {
+                const audioElement = document.getElementById('music-audio-element');
+                if (audioElement && iframe.contentWindow) {
+                    // 在iframe上下文中创建audio元素
+                    const iframeAudio = iframe.contentWindow.document.createElement('audio');
+                    iframeAudio.src = originalUrl;
+                    iframeAudio.preload = 'auto';
+
+                    iframeAudio.addEventListener('canplay', () => {
+                        console.log('iframe中的音频可以播放');
+                        // 复制到主音频元素
+                        audioElement.src = originalUrl;
+                        audioElement.load();
+
+                        // 清理iframe
+                        document.body.removeChild(iframe);
+                        resolve();
+                    });
+
+                    iframeAudio.addEventListener('error', (e) => {
+                        console.error('iframe中的音频加载失败:', e);
+                        document.body.removeChild(iframe);
+                        reject(e);
+                    });
+
+                    // 开始加载
+                    iframeAudio.load();
+                }
+            } catch (e) {
+                console.error('iframe操作失败:', e);
+                document.body.removeChild(iframe);
+                reject(e);
+            }
+        };
+
+        // 开始加载iframe
+        setTimeout(() => {
+            if (iframe.parentNode) {
+                document.body.removeChild(iframe);
+            }
+            reject(new Error('iframe加载超时'));
+        }, 10000);
+    });
+}
+
+// 高级修复：使用Service Worker或Web Worker获取音频
+async function advancedAudioFix(originalUrl) {
+    try {
+        console.log('尝试高级音频修复方案');
+
+        // 创建Web Worker来获取音频
+        const workerCode = `
+            self.addEventListener('message', async function(e) {
+                const { url } = e.data;
+                try {
+                    const response = await fetch(url, {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (compatible; AudioPlayer/1.0)',
+                            'Accept': 'audio/*',
+                            'Referer': 'https://www.douyin.com/'
+                        }
+                    });
+
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const arrayBuffer = await blob.arrayBuffer();
+                        self.postMessage({
+                            success: true,
+                            data: arrayBuffer,
+                            type: blob.type
+                        });
+                    } else {
+                        self.postMessage({ success: false, error: response.statusText });
+                    }
+                } catch (error) {
+                    self.postMessage({ success: false, error: error.message });
+                }
+            });
+        `;
+
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const worker = new Worker(URL.createObjectURL(blob));
+
+        return new Promise((resolve, reject) => {
+            worker.onmessage = function(e) {
+                const { success, data, type, error } = e.data;
+                worker.terminate();
+
+                if (success) {
+                    const blob = new Blob([data], { type: type || 'audio/mpeg' });
+                    const blobUrl = URL.createObjectURL(blob);
+                    resolve(blobUrl);
+                } else {
+                    reject(new Error(error));
+                }
+            };
+
+            worker.postMessage({ url: originalUrl });
+        });
+
+    } catch (error) {
+        console.error('高级修复失败:', error);
+        throw error;
     }
 }
 
