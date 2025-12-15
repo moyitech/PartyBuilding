@@ -474,6 +474,33 @@ async function sendPolicyMessage() {
 
     if (!message) return;
 
+    // 在添加用户消息之前，先构建对话历史上下文
+    const context_messages = [];
+    const messageElements = messages.querySelectorAll('.message');
+
+    // 构建上下文（排除欢迎语）
+    // 只需要跳过第一个消息（通常是欢迎语）
+    for (let i = 0; i < messageElements.length; i++) {
+        const msgElement = messageElements[i];
+        const contentElement = msgElement.querySelector('.message-content');
+
+        // 跳过第一个消息（欢迎语）
+        if (i === 0) continue; // 跳过欢迎语
+
+        if (contentElement) {
+            const content = contentElement.textContent || contentElement.innerText;
+            const role = msgElement.classList.contains('user') ? 'user' : 'assistant';
+
+            // 只添加非空内容
+            if (content && content.trim()) {
+                context_messages.push({
+                    role: role,
+                    content: content.trim()
+                });
+            }
+        }
+    }
+
     // 添加用户消息
     const userMessage = document.createElement('div');
     userMessage.className = 'message user';
@@ -534,32 +561,6 @@ async function sendPolicyMessage() {
         };
 
         messages.addEventListener('scroll', handleUserScroll, { passive: true });
-
-        // 构建对话历史上下文（不包含当前用户输入）
-        const context_messages = [];
-        const messageElements = messages.querySelectorAll('.message');
-
-        // 如果存在历史对话，构建上下文（排除当前用户输入）
-        if (messageElements.length > 2) { // 欢迎语 + 用户输入 + AI回复 至少3条消息
-            // 跳过第一个消息（欢迎语）和最后一个用户输入（当前输入）
-            for (let i = 1; i < messageElements.length - 1; i++) {
-                const msgElement = messageElements[i];
-                const contentElement = msgElement.querySelector('.message-content');
-
-                if (contentElement) {
-                    const content = contentElement.textContent || contentElement.innerText;
-                    const role = msgElement.classList.contains('user') ? 'user' : 'assistant';
-
-                    // 只添加非空内容
-                    if (content && content.trim()) {
-                        context_messages.push({
-                            role: role,
-                            content: content.trim()
-                        });
-                    }
-                }
-            }
-        }
 
         // 准备请求数据
         const requestData = {
