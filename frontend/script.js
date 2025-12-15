@@ -3,6 +3,9 @@
 // 全局变量
 let currentAgent = null;
 let isModalOpen = false;
+const baseURL = ''; // 基础URL，根据部署环境配置
+let userScrolledUp = false; // 用户是否向上滚动
+let lastScrollTop = 0; // 记录上次滚动位置
 
 // 页面加载完成后的初始化
 document.addEventListener('DOMContentLoaded', function() {
@@ -15,7 +18,11 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             if (e.target.id === 'policy-input') {
-                sendPolicyMessage();
+                // Shift+Enter 换行，Enter 发送
+                if (!e.shiftKey) {
+                    e.preventDefault();
+                    sendPolicyMessage();
+                }
             } else if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
                 // 查找最近的生成按钮
                 const form = e.target.closest('.agent-form');
@@ -24,6 +31,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     generateBtn.click();
                 }
             }
+        }
+    });
+
+    // 为policy-input添加自动调整高度功能
+    document.addEventListener('input', function(e) {
+        if (e.target.id === 'policy-input') {
+            const textarea = e.target;
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        }
+    });
+
+    // 使用事件委托监听动态创建的元素
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('chat-textarea')) {
+            const textarea = e.target;
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
         }
     });
 
@@ -343,6 +368,104 @@ function formatPolicyVisual(content) {
     return formatted;
 }
 
+// 简单但有效的Markdown解析函数
+function parseMarkdown(text) {
+    if (!text) return '';
+
+    let html = text;
+
+    // 处理代码块 ```code```
+    html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+        return `<pre class="code-block" data-language="${lang || ''}"><code>${escapeHtml(code.trim())}</code></pre>`;
+    });
+
+    // 处理内联代码 `code`
+    html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+
+    // 处理标题 # ## ### 等
+    html = html.replace(/^#{6}\s+(.+)$/gm, '<h6>$1</h6>');
+    html = html.replace(/^#{5}\s+(.+)$/gm, '<h5>$1</h5>');
+    html = html.replace(/^#{4}\s+(.+)$/gm, '<h4>$1</h4>');
+    html = html.replace(/^#{3}\s+(.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^#{2}\s+(.+)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^#{1}\s+(.+)$/gm, '<h1>$1</h1>');
+
+    // 处理粗体 **text**
+    html = html.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+
+    // 处理斜体 *text*
+    html = html.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+
+    // 处理链接 [text](url)
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+    // 处理有序列表 1. item
+    html = html.replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>)/s, '<ol>$1</ol>');
+
+    // 处理无序列表 - item 或 * item
+    html = html.replace(/^[\-\*]\s+(.+)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+
+    // 修复嵌套列表的问题
+    html = html.replace(/<\/ol>\s*<ol>/g, '');
+    html = html.replace(/<\/ul>\s*<ul>/g, '');
+
+    // 处理引用 > text
+    html = html.replace(/^>\s+(.+)$/gm, '<blockquote>$1</blockquote>');
+    html = html.replace(/(<blockquote>.*<\/blockquote>)/s, (match) => {
+        // 处理多行引用
+        return match.replace(/<\/blockquote>\s*<blockquote>/g, '<br>');
+    });
+
+    // 处理分割线 ---
+    html = html.replace(/^---+$/gm, '<hr>');
+
+    // 处理换行
+    html = html.replace(/\n\n/g, '</p><p>');
+    html = html.replace(/\n/g, '<br>');
+
+    // 包装段落
+    if (html && !html.startsWith('<')) {
+        html = '<p>' + html + '</p>';
+    }
+
+    // 清理多余的标签
+    html = html.replace(/<p>\s*<\/p>/g, '');
+    html = html.replace(/<p>(<h[1-6]>)/g, '$1');
+    html = html.replace(/(<\/h[1-6]>)<\/p>/g, '$1');
+    html = html.replace(/<p>(<hr>)<\/p>/g, '$1');
+    html = html.replace(/<p>(<blockquote>)/g, '$1');
+    html = html.replace(/(<\/blockquote>)<\/p>/g, '$1');
+    html = html.replace(/<p>(<ol>|<ul>)/g, '$1');
+    html = html.replace(/(<\/ol>|<\/ul>)<\/p>/g, '$1');
+    html = html.replace(/<p>(<pre)/g, '$1');
+    html = html.replace(/(<\/pre>)<\/p>/g, '$1');
+
+    return html;
+}
+
+// HTML转义函数
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// 检查用户是否滚动到底部附近
+function isUserNearBottom(container) {
+    const threshold = 100; // 100px 阈值
+    return container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
+}
+
+// 智能滚动函数
+function smartScrollToBottom(container) {
+    if (isUserNearBottom(container)) {
+        // 只有当用户在底部附近时才自动滚动
+        container.scrollTop = container.scrollHeight;
+    }
+}
+
 // 政策智能问答功能
 async function sendPolicyMessage() {
     const input = document.getElementById('policy-input');
@@ -354,16 +477,23 @@ async function sendPolicyMessage() {
     // 添加用户消息
     const userMessage = document.createElement('div');
     userMessage.className = 'message user';
-    userMessage.textContent = message;
+    const userContent = document.createElement('div');
+    userContent.className = 'message-content';
+    userContent.textContent = message;
+    userMessage.appendChild(userContent);
     messages.appendChild(userMessage);
 
-    // 清空输入框
+    // 清空输入框并重置高度
     input.value = '';
+    input.style.height = 'auto';
 
     // 显示思考中的消息
     const thinkingMessage = document.createElement('div');
     thinkingMessage.className = 'message bot';
-    thinkingMessage.innerHTML = '<span class="thinking-indicator">正在思考中<span class="thinking-dots">...</span></span>';
+    const thinkingContent = document.createElement('div');
+    thinkingContent.className = 'message-content';
+    thinkingContent.innerHTML = '<span class="thinking-indicator">正在思考中<span class="thinking-dots">...</span></span>';
+    thinkingMessage.appendChild(thinkingContent);
     messages.appendChild(thinkingMessage);
 
     // 滚动到底部
@@ -373,20 +503,72 @@ async function sendPolicyMessage() {
         // 创建流式响应的消息容器
         const botMessageContainer = document.createElement('div');
         botMessageContainer.className = 'message bot streaming';
-        botMessageContainer.innerHTML = '';
+        const botContent = document.createElement('div');
+        botContent.className = 'message-content';
+        botMessageContainer.appendChild(botContent);
         messages.insertBefore(botMessageContainer, thinkingMessage);
 
         // 移除思考中的消息
         messages.removeChild(thinkingMessage);
 
+        // 简化的滚动控制：只有当用户主动向上滚动时才停止自动滚动
+        let userScrolledUp = false;
+        let scrollTimeout;
+
+        const handleUserScroll = () => {
+            const isNearBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight <= 150;
+
+            if (!isNearBottom) {
+                userScrolledUp = true;
+            } else {
+                userScrolledUp = false;
+            }
+
+            // 清除之前的timeout
+            clearTimeout(scrollTimeout);
+
+            // 2秒后重置手动滚动标记
+            scrollTimeout = setTimeout(() => {
+                userScrolledUp = false;
+            }, 2000);
+        };
+
+        messages.addEventListener('scroll', handleUserScroll, { passive: true });
+
+        // 构建对话历史上下文（不包含当前用户输入）
+        const context_messages = [];
+        const messageElements = messages.querySelectorAll('.message');
+
+        // 如果存在历史对话，构建上下文（排除当前用户输入）
+        if (messageElements.length > 2) { // 欢迎语 + 用户输入 + AI回复 至少3条消息
+            // 跳过第一个消息（欢迎语）和最后一个用户输入（当前输入）
+            for (let i = 1; i < messageElements.length - 1; i++) {
+                const msgElement = messageElements[i];
+                const contentElement = msgElement.querySelector('.message-content');
+
+                if (contentElement) {
+                    const content = contentElement.textContent || contentElement.innerText;
+                    const role = msgElement.classList.contains('user') ? 'user' : 'assistant';
+
+                    // 只添加非空内容
+                    if (content && content.trim()) {
+                        context_messages.push({
+                            role: role,
+                            content: content.trim()
+                        });
+                    }
+                }
+            }
+        }
+
         // 准备请求数据
         const requestData = {
             user_input: message,
-            context_messages: []
+            context_messages: context_messages
         };
 
         // 发送流式请求
-        const response = await fetch('/policy_agent/ask', {
+        const response = await fetch(baseURL + '/policy_agent/ask', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -434,15 +616,45 @@ async function sendPolicyMessage() {
 
                         if (content) {
                             accumulatedText += content;
-                            botMessageContainer.innerHTML = accumulatedText;
-                            messages.scrollTop = messages.scrollHeight;
+                            // 使用parseMarkdown解析内容并更新到message-content
+                            const messageContent = botMessageContainer.querySelector('.message-content');
+                            if (messageContent) {
+                                messageContent.innerHTML = parseMarkdown(accumulatedText);
+                            }
+
+                            // 强制重新计算容器高度
+                            messages.style.height = 'auto';
+                            messages.offsetHeight; // 触发重排
+                            messages.style.height = '';
+
+                            // 智能滚动：只有当用户在底部且没有手动滚动时才自动滚动
+                            setTimeout(() => {
+                                if (!userScrolledUp) {
+                                    messages.scrollTop = messages.scrollHeight;
+                                }
+                            }, 10);
                         }
                     } catch (e) {
                         // 如果不是JSON格式，直接使用原始文本
                         if (data) {
                             accumulatedText += data;
-                            botMessageContainer.innerHTML = accumulatedText;
-                            messages.scrollTop = messages.scrollHeight;
+                            // 使用parseMarkdown解析内容并更新到message-content
+                            const messageContent = botMessageContainer.querySelector('.message-content');
+                            if (messageContent) {
+                                messageContent.innerHTML = parseMarkdown(accumulatedText);
+                            }
+
+                            // 强制重新计算容器高度
+                            messages.style.height = 'auto';
+                            messages.offsetHeight; // 触发重排
+                            messages.style.height = '';
+
+                            // 智能滚动：只有当用户在底部且没有手动滚动时才自动滚动
+                            setTimeout(() => {
+                                if (!userScrolledUp) {
+                                    messages.scrollTop = messages.scrollHeight;
+                                }
+                            }, 10);
                         }
                     }
                 }
@@ -459,12 +671,12 @@ async function sendPolicyMessage() {
                         const content = parsed.content || parsed.choices?.[0]?.delta?.content || '';
                         if (content) {
                             accumulatedText += content;
-                            botMessageContainer.innerHTML = accumulatedText;
+                            botMessageContainer.innerHTML = parseMarkdown(accumulatedText);
                         }
                     } catch (e) {
                         if (data) {
                             accumulatedText += data;
-                            botMessageContainer.innerHTML = accumulatedText;
+                            botMessageContainer.innerHTML = parseMarkdown(accumulatedText);
                         }
                     }
                 }
@@ -473,6 +685,14 @@ async function sendPolicyMessage() {
 
         // 流结束，移除streaming类
         botMessageContainer.classList.remove('streaming');
+
+        // 清理滚动监听器
+        messages.removeEventListener('scroll', handleUserScroll);
+        clearTimeout(scrollTimeout);
+
+        // 重置全局变量
+        userScrolledUp = false;
+        lastScrollTop = 0;
 
     } catch (error) {
         console.error('政策问答错误:', error);
@@ -493,8 +713,7 @@ async function sendPolicyMessage() {
         messages.appendChild(errorMessage);
     }
 
-    // 滚动到底部
-    messages.scrollTop = messages.scrollHeight;
+    // 不强制滚动到底部，尊重用户的滚动位置
 }
 
 // 常规组织生活设计
@@ -512,7 +731,7 @@ async function generateOrgPlan() {
     currentAgent = 'organization';
 
     try {
-        const response = await fetch('/api/organization/generate', {
+        const response = await fetch(baseURL + '/api/organization/generate', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -554,7 +773,7 @@ async function generateImmersivePlan() {
     currentAgent = 'immersive';
 
     try {
-        const response = await fetch('/api/immersive/generate', {
+        const response = await fetch(baseURL + '/api/immersive/generate', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -591,7 +810,7 @@ async function generateMusicPrompt() {
     promptBtn.innerHTML = '<span class="btn-icon">⏳</span> 生成中...';
 
     try {
-        const response = await fetch('/music/prompt_generate');
+        const response = await fetch(baseURL + '/music/prompt_generate');
         const data = await response.json();
 
         if (data.prompt) {
@@ -638,7 +857,7 @@ async function generateMusic() {
     currentAgent = 'music';
 
     try {
-        const response = await fetch('/music/generate', {
+        const response = await fetch(baseURL + '/music/generate', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1619,7 +1838,7 @@ async function generateHistoryScenario() {
     currentAgent = 'history';
 
     try {
-        const response = await fetch('/api/history/generate', {
+        const response = await fetch(baseURL + '/api/history/generate', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1660,7 +1879,7 @@ async function generatePolicyVisual() {
     currentAgent = 'policy-visual';
 
     try {
-        const response = await fetch('/api/policy-visual/generate', {
+        const response = await fetch(baseURL + '/api/policy-visual/generate', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
