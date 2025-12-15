@@ -736,12 +736,31 @@
 
 .audio-enhanced .custom-audio-player {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 15px;
     padding: 15px;
     background: rgba(255, 255, 255, 0.15);
     border-radius: 10px;
     backdrop-filter: blur(10px);
+}
+
+.audio-enhanced .player-controls-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.audio-enhanced .player-controls-row:first-child {
+    justify-content: center;
+}
+
+.audio-enhanced .player-controls-row:nth-child(2) {
+    justify-content: center;
+}
+
+.audio-enhanced .player-controls-row:last-child {
+    justify-content: space-between;
+    align-items: center;
 }
 
 .audio-enhanced .play-pause-btn {

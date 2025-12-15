@@ -925,25 +925,32 @@ async function generateMusic() {
 
                             <!-- 自定义音频播放器 -->
                             <div class="custom-audio-player">
-                                <button class="play-pause-btn" id="play-pause-btn">
-                                    <span id="play-icon">▶</span>
-                                </button>
-
-                                <div class="audio-time" id="current-time">0:00</div>
-
-                                <div class="audio-timeline" id="audio-timeline">
-                                    <div class="audio-progress" id="audio-progress">
-                                        <div class="audio-thumb" id="audio-thumb"></div>
-                                    </div>
+                                <!-- 第一行：播放按钮 -->
+                                <div class="player-controls-row">
+                                    <button class="play-pause-btn" id="play-pause-btn">
+                                        <span id="play-icon">▶</span>
+                                    </button>
                                 </div>
 
-                                <div class="audio-time" id="duration">0:00</div>
+                                <!-- 第二行：进度条 -->
+                                <div class="player-controls-row">
+                                    <div class="audio-time" id="current-time">0:00</div>
+                                    <div class="audio-timeline" id="audio-timeline" style="flex: 1; margin: 0 15px;">
+                                        <div class="audio-progress" id="audio-progress">
+                                            <div class="audio-thumb" id="audio-thumb"></div>
+                                        </div>
+                                    </div>
+                                    <div class="audio-time" id="duration">0:00</div>
+                                </div>
 
-                                <div class="volume-control">
-                                    <span class="volume-icon" id="volume-icon">🔊</span>
-                                    <div class="volume-slider" id="volume-slider">
-                                        <div class="volume-progress"></div>
-                                        <div class="volume-thumb"></div>
+                                <!-- 第三行：音量控制 -->
+                                <div class="player-controls-row">
+                                    <div class="volume-control">
+                                        <span class="volume-icon" id="volume-icon">🔊</span>
+                                        <div class="volume-slider" id="volume-slider">
+                                            <div class="volume-progress"></div>
+                                            <div class="volume-thumb"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1166,25 +1173,28 @@ function setupCustomAudioPlayer() {
         }
     });
 
-    // 拖动进度条
-    timeline.addEventListener('mousedown', (e) => {
+    // 拖动进度条 - 支持鼠标和触摸事件
+    function startDrag(e) {
         isDragging = true;
         // 记住当前播放状态
         audio.dataset.wasPlaying = !audio.paused;
-        updateProgressFromMouse(e);
-    });
+        updateProgressFromMouse(e.touches ? e.touches[0] : e);
+        e.preventDefault();
+    }
 
-    document.addEventListener('mousemove', (e) => {
+    function drag(e) {
         if (isDragging) {
-            updateProgressFromMouse(e);
+            updateProgressFromMouse(e.touches ? e.touches[0] : e);
+            e.preventDefault();
         }
-    });
+    }
 
-    document.addEventListener('mouseup', (e) => {
+    function endDrag(e) {
         if (isDragging) {
             isDragging = false;
             const rect = timeline.getBoundingClientRect();
-            const mousePercent = (e.clientX - rect.left) / rect.width;
+            const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+            const mousePercent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
             if (!isNaN(audio.duration)) {
                 audio.currentTime = mousePercent * audio.duration;
             }
@@ -1195,7 +1205,17 @@ function setupCustomAudioPlayer() {
             }
             delete audio.dataset.wasPlaying;
         }
-    });
+    }
+
+    // 鼠标事件
+    timeline.addEventListener('mousedown', startDrag);
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', endDrag);
+
+    // 触摸事件 - 移动端支持
+    timeline.addEventListener('touchstart', startDrag, { passive: false });
+    document.addEventListener('touchmove', drag, { passive: false });
+    document.addEventListener('touchend', endDrag);
 
     function updateProgressFromMouse(e) {
         const rect = timeline.getBoundingClientRect();
