@@ -3,9 +3,38 @@
 太原理工大学计算机科学与技术学院所开发的智慧思政智能体平台
 
 ## 技术架构
-前端：微信端Web网页，用于用户在线使用智能体，自适应 PC Web 和手机端 Web。无登录功能。
-后端：使用 fastapi
-前后端分离，前端通过 static 挂载的方式和后端一起部署
+
+### 后端技术栈
+- **框架**: FastAPI (>= 0.116.1) + Python 3.11+
+- **ASGI服务器**: Uvicorn (>= 0.35.0)
+- **数据库**:
+  - PostgreSQL (通过 asyncpg + SQLAlchemy 2.0)
+  - pgvector 扩展用于向量搜索
+- **缓存**: Redis (通过 aioredis)
+- **AI/ML**: LangChain 生态系统 (langchain>=1.1.3)
+- **包管理**: UV (现代 Python 包管理器)
+- **日志**: Loguru + YAML 配置
+
+### 前端技术栈
+- **架构**: 纯客户端 HTML/CSS/JavaScript (无 React/Vue 框架)
+- **样式**: 自定义 CSS + 响应式设计
+- **交互**: 原生 JavaScript
+- **部署**: FastAPI 静态文件挂载
+
+### 核心技术特性
+- **异步架构**: 全异步数据库操作和 HTTP 处理
+- **流式响应**: Server-Sent Events (SSE) 实现实时交互
+- **AI 集成**: 多智能体架构支持不同 LLM 提供商
+- **向量存储**: pgvector 用于语义搜索和嵌入
+- **文件缓存**: 本地文件系统 + 阿里云 OSS 存储
+- **API 设计**: RESTful API + Pydantic 数据验证
+
+### 部署架构
+- **部署方式**: 直接 Python 部署 (无 Docker)
+- **启动脚本**: run.sh (Git 同步 + 依赖安装 + 服务启动)
+- **服务端口**: 8002
+- **环境配置**: .env 文件
+- **项目结构**: 模块化设计 (agent/、model/、utils/)
 
 ## 主要内容
 智能体1:政策智能问答智能体。以聊天的形式和智能体进行对话。
