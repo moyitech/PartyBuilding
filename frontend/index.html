@@ -4,271 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>智慧思政智能体平台 - 太原理工大学</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="assets/css/main.css">
 </head>
 <body>
-    <!-- 头部导航 -->
-    <header class="header">
-        <div class="container">
-            <div class="header-content">
-                <div class="school-logo">
-                    <img src="image.png" alt="太原理工大学计算机科学与技术学院" />
-                </div>
-                <div class="header-text">
-                    <h1 class="logo">智慧思政智能体平台</h1>
-                </div>
+    <!-- 主容器 -->
+    <div class="app-container">
+        <!-- 头部导航 -->
+        <div id="header-component"></div>
+
+        <!-- 主要内容区域 -->
+        <main class="main-content">
+            <div class="container">
+                <!-- 平台介绍 -->
+                <div id="intro-component"></div>
+
+                <!-- 平台特色 -->
+                <div id="features-component"></div>
+
+                <!-- 智能体功能展示 -->
+                <div id="agents-component"></div>
+
+                <!-- 使用说明 -->
+                <div id="usage-component"></div>
             </div>
-        </div>
-        <div class="header-decoration">
-            <div class="decoration-circle"></div>
-            <div class="decoration-circle"></div>
-            <div class="decoration-circle"></div>
-        </div>
-    </header>
+        </main>
 
-    <!-- 主要内容区域 -->
-    <main class="main-content">
-        <div class="container">
-            <!-- 平台介绍 -->
-            <section class="intro-section">
-                <h2>欢迎使用智慧思政智能体平台</h2>
-                <p>本平台是太原理工大学计算机科学与技术学院开发的智慧思政教育平台，致力于通过人工智能技术为党建工作提供智能化、现代化的解决方案。</p>
-            </section>
+        <!-- 智能体弹窗和结果展示 -->
+        <div id="modal-component"></div>
 
-            <!-- 平台特色 -->
-            <section class="features-section">
-                <h2>平台特色</h2>
-                <div class="features-grid">
-                    <div class="feature-item">
-                        <div class="shimmer-effect"></div>
-                        <div class="feature-icon">🎯</div>
-                        <h3>智能精准</h3>
-                        <p>基于先进的AI技术，提供精准的政策解读和内容生成</p>
-                    </div>
-                    <div class="feature-item">
-                        <div class="shimmer-effect"></div>
-                        <div class="feature-icon">⚡</div>
-                        <h3>高效便捷</h3>
-                        <p>一键生成，端到端服务，大幅提升党建工作效率</p>
-                    </div>
-                    <div class="feature-item">
-                        <div class="shimmer-effect"></div>
-                        <div class="feature-icon">🎨</div>
-                        <h3>形式多样</h3>
-                        <p>支持文字、音频、视频等多种输出形式</p>
-                    </div>
-                    <div class="feature-item">
-                        <div class="shimmer-effect"></div>
-                        <div class="feature-icon">📱</div>
-                        <h3>移动优先</h3>
-                        <p>完美适配移动端，支持微信浏览器直接使用</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 智能体功能展示 -->
-            <section class="agents-showcase">
-                <h2>智能体功能</h2>
-                <div class="agents-grid">
-                    <!-- 智能体1: 政策智能问答 -->
-                    <div class="agent-showcase-card" data-agent="policy">
-                        <div class="card-header">
-                            <div class="card-icon">
-                                <svg viewBox="0 0 24 24" class="icon">
-                                    <path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z"/>
-                                </svg>
-                            </div>
-                            <h3 class="card-title">政策智能问答</h3>
-                        </div>
-                        <p class="card-description">以聊天形式与智能体对话，获取政策解读和答疑服务。支持实时互动，智能回答各类政策相关问题。</p>
-                        <div class="card-features">
-                            <span class="feature-tag">实时对话</span>
-                            <span class="feature-tag">智能问答</span>
-                            <span class="feature-tag">政策解读</span>
-                        </div>
-                        <button class="open-agent-btn" onclick="openAgent('policy')">
-                            开始使用 →
-                        </button>
-                    </div>
-
-                    <!-- 智能体2: 常规组织生活设计 -->
-                    <div class="agent-showcase-card" data-agent="organization">
-                        <div class="card-header">
-                            <div class="card-icon">
-                                <svg viewBox="0 0 24 24" class="icon">
-                                    <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
-                                </svg>
-                            </div>
-                            <h3 class="card-title">常规组织生活设计</h3>
-                        </div>
-                        <p class="card-description">输入主题、时长、对象等参数，自动生成完整的组织生活方案。符合"三会一课"规范，提供学习资料和流程建议。</p>
-                        <div class="card-features">
-                            <span class="feature-tag">参数化生成</span>
-                            <span class="feature-tag">完整方案</span>
-                            <span class="feature-tag">流程规范</span>
-                        </div>
-                        <button class="open-agent-btn" onclick="openAgent('organization')">
-                            开始使用 →
-                        </button>
-                    </div>
-
-                    <!-- 智能体3: 沉浸式组织生活设计 -->
-                    <div class="agent-showcase-card" data-agent="immersive">
-                        <div class="card-header">
-                            <div class="card-icon">
-                                <svg viewBox="0 0 24 24" class="icon">
-                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                                </svg>
-                            </div>
-                            <h3 class="card-title">沉浸式组织生活设计</h3>
-                        </div>
-                        <p class="card-description">"代码长征：重温红色电信史"沉浸式主题党日活动。通过编写代码完成任务，将专业学习与党史深度融合。</p>
-                        <div class="card-features">
-                            <span class="feature-tag">沉浸体验</span>
-                            <span class="feature-tag">代码实践</span>
-                            <span class="feature-tag">党史融合</span>
-                        </div>
-                        <button class="open-agent-btn" onclick="openAgent('immersive')">
-                            开始使用 →
-                        </button>
-                    </div>
-
-                    <!-- 智能体4: 音乐智能体 -->
-                    <div class="agent-showcase-card" data-agent="music">
-                        <div class="card-header">
-                            <div class="card-icon">
-                                <svg viewBox="0 0 24 24" class="icon">
-                                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                                </svg>
-                            </div>
-                            <h3 class="card-title">音乐智能体</h3>
-                        </div>
-                        <p class="card-description">输入关键词生成红色旋律或推荐经典红歌。支持自动生成提示词，可自定义演唱者、风格和情感色彩。</p>
-                        <div class="card-features">
-                            <span class="feature-tag">AI作曲</span>
-                            <span class="feature-tag">红歌推荐</span>
-                            <span class="feature-tag">自动提示</span>
-                        </div>
-                        <button class="open-agent-btn" onclick="openAgent('music')">
-                            开始使用 →
-                        </button>
-                    </div>
-
-                    <!-- 智能体5: 党史情景生成 -->
-                    <div class="agent-showcase-card" data-agent="history">
-                        <div class="card-header">
-                            <div class="card-icon">
-                                <svg viewBox="0 0 24 24" class="icon">
-                                    <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
-                                </svg>
-                            </div>
-                            <h3 class="card-title">党史情景生成</h3>
-                        </div>
-                        <p class="card-description">输入历史事件生成生动场景描述，可进一步转化为图文或视频脚本。让党史学习更加生动形象。</p>
-                        <div class="card-features">
-                            <span class="feature-tag">场景再现</span>
-                            <span class="feature-tag">视频脚本</span>
-                            <span class="feature-tag">生动描述</span>
-                        </div>
-                        <button class="open-agent-btn" onclick="openAgent('history')">
-                            开始使用 →
-                        </button>
-                    </div>
-
-                    <!-- 智能体6: 绘声绘色政策解读 -->
-                    <div class="agent-showcase-card" data-agent="policy-visual">
-                        <div class="card-header">
-                            <div class="card-icon">
-                                <svg viewBox="0 0 24 24" class="icon">
-                                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
-                                </svg>
-                            </div>
-                            <h3 class="card-title">绘声绘色政策解读</h3>
-                        </div>
-                        <p class="card-description">将党的二十大报告等政策文本转化为H5图文海报、短视频脚本或互动测试题，让政策解读更加生动有趣。</p>
-                        <div class="card-features">
-                            <span class="feature-tag">H5海报</span>
-                            <span class="feature-tag">视频脚本</span>
-                            <span class="feature-tag">互动测试</span>
-                        </div>
-                        <button class="open-agent-btn" onclick="openAgent('policy-visual')">
-                            开始使用 →
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 使用说明 -->
-            <section class="usage-section">
-                <h2>使用说明</h2>
-                <div class="steps-grid">
-                    <div class="step-item">
-                        <div class="step-number">1</div>
-                        <h3>选择功能</h3>
-                        <p>根据需求选择合适的智能体功能</p>
-                    </div>
-                    <div class="step-item">
-                        <div class="step-number">2</div>
-                        <h3>输入信息</h3>
-                        <p>按照提示输入相关的关键词或参数</p>
-                    </div>
-                    <div class="step-item">
-                        <div class="step-number">3</div>
-                        <h3>生成内容</h3>
-                        <p>点击生成按钮，AI将快速生成所需内容</p>
-                    </div>
-                    <div class="step-item">
-                        <div class="step-number">4</div>
-                        <h3>保存使用</h3>
-                        <p>复制或下载生成的内容，直接应用于工作中</p>
-                    </div>
-                </div>
-            </section>
-        </div>
-    </main>
-
-    <!-- 智能体弹窗 -->
-    <div class="agent-modal" id="agentModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalTitle">智能体</h2>
-                <button class="modal-close" onclick="closeModal()">×</button>
-            </div>
-            <div class="modal-body" id="modalBody">
-                <!-- 动态加载智能体内容 -->
-            </div>
-        </div>
+        <!-- 底部信息 -->
+        <div id="footer-component"></div>
     </div>
 
-    <!-- 结果展示区域 -->
-    <section class="result-section" id="result-section" style="display: none;">
-        <div class="container">
-            <div class="result-header">
-                <h3 id="result-title">生成结果</h3>
-                <button class="close-result-btn" onclick="closeResult()">×</button>
-            </div>
-            <div class="result-content" id="result-content">
-                <!-- 动态加载生成结果 -->
-            </div>
-        </div>
-    </section>
+    <!-- 智能体模板（保持原样） -->
+    <div id="agent-templates" style="display: none;"></div>
 
-    <!-- 加载动画 -->
-    <div class="loading-overlay" id="loading" style="display: none;">
-        <div class="loading-spinner">
-            <div class="spinner"></div>
-            <p>AI正在思考中...</p>
-        </div>
-    </div>
+    <!-- 脚本文件 -->
+    <script type="module" src="assets/js/main.js"></script>
 
-    <!-- 底部信息 -->
-    <footer class="footer">
-        <div class="container">
-            <p>© 2025 太原理工大学计算机科学与技术学院 - 智慧思政智能体平台</p>
-        </div>
-    </footer>
-
-    <script src="script.js"></script>
     <!-- 网站统计 -->
     <script charset="UTF-8" id="LA_COLLECT" src="//sdk.51.la/js-sdk-pro.min.js"></script>
     <script>LA.init({id:"L2OV9YIT5Ru2sNxQ",ck:"L2OV9YIT5Ru2sNxQ"})</script>

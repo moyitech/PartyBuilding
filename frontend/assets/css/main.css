@@ -1,5 +1,18 @@
 /* 智慧思政智能体平台样式 */
 
+/* 导入CSS变量 */
+@import url('./utils/variables.css');
+@import url('./utils/animations.css');
+
+/* 导入组件样式 */
+@import url('./components/header.css');
+@import url('./components/features.css');
+@import url('./components/agents.css');
+@import url('./components/usage.css');
+@import url('./components/modal.css');
+@import url('./components/footer.css');
+@import url('./components/music-player.css');
+
 /* 基础样式重置 */
 * {
     margin: 0;

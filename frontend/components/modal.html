@@ -1,0 +1,33 @@
+<!-- 智能体弹窗组件 -->
+<div class="agent-modal" id="agentModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">智能体</h2>
+            <button class="modal-close" onclick="closeModal()">×</button>
+        </div>
+        <div class="modal-body" id="modalBody">
+            <!-- 动态加载智能体内容 -->
+        </div>
+    </div>
+</div>
+
+<!-- 结果展示区域 -->
+<section class="result-section" id="result-section" style="display: none;">
+    <div class="container">
+        <div class="result-header">
+            <h3 id="result-title">生成结果</h3>
+            <button class="close-result-btn" onclick="closeResult()">×</button>
+        </div>
+        <div class="result-content" id="result-content">
+            <!-- 动态加载生成结果 -->
+        </div>
+    </div>
+</section>
+
+<!-- 加载动画 -->
+<div class="loading-overlay" id="loading" style="display: none;">
+    <div class="loading-spinner">
+        <div class="spinner"></div>
+        <p>AI正在思考中...</p>
+    </div>
+</div>
