@@ -319,34 +319,218 @@ class SmartIdeologyApp {
      */
     async generateOrgPlan() {
         const theme = document.getElementById('org-theme')?.value.trim();
-        const duration = document.getElementById('org-duration')?.value;
-        const audience = document.getElementById('org-audience')?.value;
+        const minute = parseInt(document.getElementById('org-minute')?.value) || 60;
+        const participant = document.getElementById('org-participant')?.value.trim();
 
-        if (!theme || !duration || !audience) {
-            showToast('请填写所有参数', 'warning');
+  
+        if (!theme || !participant) {
+            showToast('请填写活动主题和参与对象', 'warning');
             return;
         }
 
         const button = document.querySelector('[onclick="generateOrgPlan()"]');
         if (!preventDuplicateClick(button)) return;
 
-        this.loadingManager.show();
+        // 显示结果区域（在弹窗内部）
+        const resultSection = document.getElementById('org-plan-result');
+        const resultContent = document.getElementById('org-plan-content');
+
+        console.log('弹窗内部结果区域:', resultSection);
+        console.log('弹窗内部结果内容:', resultContent);
+
+        if (!resultSection || !resultContent) {
+            console.error('无法找到弹窗内部结果显示区域元素');
+            showToast('页面元素错误，请刷新重试', 'error');
+            return;
+        }
+
+        // 显示结果区域
+        resultSection.style.display = 'block';
+
+        // 显示生成中状态
+        resultContent.innerHTML = `
+            <div class="activity-plan-result">
+                <div class="streaming-content">
+                    <div class="section-placeholder">
+                        <h3>📚 学习资料</h3>
+                        <div class="content-streaming">AI正在思考中<span class="thinking-dots">...</span></div>
+                    </div>
+                    <div class="section-placeholder">
+                        <h3>💬 讨论议题</h3>
+                        <div class="content-streaming">AI正在思考中<span class="thinking-dots">...</span></div>
+                    </div>
+                    <div class="section-placeholder">
+                        <h3>📋 活动流程建议</h3>
+                        <div class="content-streaming">AI正在思考中<span class="thinking-dots">...</span></div>
+                    </div>
+                </div>
+            </div>
+        `;
 
         try {
-            const data = await this.agentServices.generateOrgPlan({
-                theme, duration, audience
-            });
+            await this.agentServices.generateOrgPlan(
+                { theme, minute, participant },
+                ({ result, done, updateInfo }) => {
+                    if (done) {
+                        // 生成完成，渲染最终结果
+                        resultContent.innerHTML = `
+                            <div class="activity-plan-result">
+                                <div class="result-section">
+                                    <h3>📚 学习资料</h3>
+                                    <div class="study-materials">
+                                        ${result.学习资料 && result.学习资料.length > 0
+                                            ? result.学习资料.map((item, index) => `<div class="material-item">${index + 1}. ${item}</div>`).join('')
+                                            : '<div class="no-content">暂无学习资料</div>'
+                                        }
+                                    </div>
+                                </div>
 
-            if (data.success) {
-                this.showResult('组织生活方案', data.plan, 'organization');
-            } else {
-                showToast('生成失败：' + (data.error || '未知错误'), 'error');
-            }
+                                <div class="result-section">
+                                    <h3>💬 讨论议题</h3>
+                                    <div class="discussion-topics">
+                                        ${result.讨论议题 && result.讨论议题.length > 0
+                                            ? result.讨论议题.map((topic, index) => `<div class="topic-item">${index + 1}. ${topic}</div>`).join('')
+                                            : '<div class="no-content">暂无讨论议题</div>'
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="result-section">
+                                    <h3>📋 活动流程建议</h3>
+                                    <div class="activity-flow">
+                                        ${result.活动流程建议
+                                            ? `<div class="flow-content">${parseMarkdown(result.活动流程建议)}</div>`
+                                            : '<div class="no-content">暂无活动流程建议</div>'
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+
+                        showToast('✅ 组织生活方案生成完成！', 'success');
+                    } else if (result && updateInfo) {
+                        // 增量更新结果
+                        const streamingContent = resultContent.querySelector('.streaming-content');
+                        if (streamingContent) {
+                            // 检查是否需要初始化流式内容
+                            if (!streamingContent.querySelector('.materials-container')) {
+                                streamingContent.innerHTML = `
+                                    <div class="section-placeholder">
+                                        <h4>📚 学习资料</h4>
+                                        <div class="materials-container"></div>
+                                        <div class="content-streaming">
+                                            <span class="placeholder-text">AI正在思考中<span class="thinking-dots">...</span></span>
+                                        </div>
+                                    </div>
+                                    <div class="section-placeholder">
+                                        <h4>💬 讨论议题</h4>
+                                        <div class="topics-container"></div>
+                                        <div class="content-streaming">
+                                            <span class="placeholder-text">AI正在思考中<span class="thinking-dots">...</span></span>
+                                        </div>
+                                    </div>
+                                    <div class="section-placeholder">
+                                        <h4>📋 活动流程建议</h4>
+                                        <div class="flow-streaming-container">
+                                            <div class="flow-content"></div>
+                                        </div>
+                                        <div class="content-streaming">
+                                            <span class="placeholder-text">AI正在思考中<span class="thinking-dots">...</span></span>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+
+                            // 处理学习资料实时更新
+                            if (updateInfo.学习资料) {
+                                const materialsContainer = streamingContent.querySelector('.materials-container');
+                                const contentStreaming = streamingContent.querySelector('.materials-container + .content-streaming');
+
+                                if (updateInfo.学习资料.完整列表) {
+                                    const items = updateInfo.学习资料.完整列表.filter(item => item && item.trim().length > 0);
+                                    materialsContainer.innerHTML = items
+                                        .map((item, index) => `<div class="material-item">${index + 1}. ${item}</div>`)
+                                        .join('');
+                                } else if (updateInfo.学习资料.新增项目 && updateInfo.学习资料.新增项目.length > 0) {
+                                    updateInfo.学习资料.新增项目.forEach((item) => {
+                                        if (item && item.trim().length > 0) {
+                                            const itemElement = document.createElement('div');
+                                            itemElement.className = 'material-item new-item';
+                                            itemElement.textContent = `${materialsContainer.children.length + 1}. ${item}`;
+                                            materialsContainer.appendChild(itemElement);
+
+                                            setTimeout(() => {
+                                                itemElement.classList.remove('new-item');
+                                            }, 50);
+                                        }
+                                    });
+                                }
+
+                                if (materialsContainer.children.length > 0) {
+                                    contentStreaming.style.display = 'none';
+                                }
+                            }
+
+                            // 处理讨论议题实时更新
+                            if (updateInfo.讨论议题) {
+                                const topicsContainer = streamingContent.querySelector('.topics-container');
+                                const contentStreaming = streamingContent.querySelector('.topics-container + .content-streaming');
+
+                                if (updateInfo.讨论议题.完整列表) {
+                                    const topics = updateInfo.讨论议题.完整列表.filter(topic => topic && topic.trim().length > 0);
+                                    topicsContainer.innerHTML = topics
+                                        .map((topic, index) => `<div class="topic-item">${index + 1}. ${topic}</div>`)
+                                        .join('');
+                                } else if (updateInfo.讨论议题.新增项目 && updateInfo.讨论议题.新增项目.length > 0) {
+                                    updateInfo.讨论议题.新增项目.forEach((topic) => {
+                                        if (topic && topic.trim().length > 0) {
+                                            const topicElement = document.createElement('div');
+                                            topicElement.className = 'topic-item new-item';
+                                            topicElement.textContent = `${topicsContainer.children.length + 1}. ${topic}`;
+                                            topicsContainer.appendChild(topicElement);
+
+                                            setTimeout(() => {
+                                                topicElement.classList.remove('new-item');
+                                            }, 50);
+                                        }
+                                    });
+                                }
+
+                                if (topicsContainer.children.length > 0) {
+                                    contentStreaming.style.display = 'none';
+                                }
+                            }
+
+                            // 处理活动流程建议的流式更新
+                            if (updateInfo.活动流程建议) {
+                                const flowContent = streamingContent.querySelector('.flow-content');
+                                const contentStreaming = streamingContent.querySelector('.flow-streaming-container + .content-streaming');
+
+                                flowContent.innerHTML = parseMarkdown(updateInfo.活动流程建议.完整内容);
+                                contentStreaming.style.display = 'none';
+                            }
+                        }
+                    }
+                },
+                (error) => {
+                    console.error('生成组织生活方案错误:', error);
+                    resultContent.innerHTML = `
+                        <div class="error-content">
+                            <p>抱歉，生成组织生活方案时出现错误，请稍后重试。</p>
+                            <p style="font-size: 0.9em; opacity: 0.8;">错误信息：${error.message || '网络连接失败'}</p>
+                        </div>
+                    `;
+                    showToast('生成失败，请稍后重试', 'error');
+                }
+            );
         } catch (error) {
             console.error('生成组织生活方案错误:', error);
+            resultContent.innerHTML = `
+                <div class="error-content">
+                    <p>抱歉，生成组织生活方案时出现错误，请稍后重试。</p>
+                </div>
+            `;
             showToast('网络错误，请稍后重试', 'error');
-        } finally {
-            this.loadingManager.hide();
         }
     }
 

@@ -39,6 +39,17 @@ export function smartScrollToBottom(container) {
 export function parseMarkdown(text) {
     if (!text) return '';
 
+    if (window.marked) {
+        if (!window.marked.__tp_configured) {
+            window.marked.setOptions({
+                breaks: true,
+                gfm: true
+            });
+            window.marked.__tp_configured = true;
+        }
+        return window.marked.parse(text);
+    }
+
     let html = text;
 
     // 处理代码块 ```code```

@@ -34,36 +34,51 @@
 <!-- 常规组织生活设计模板 -->
 <div class="agent-template" id="organization-template" style="display: none;">
     <div class="agent-intro">
-        <p>通过输入主题关键词、活动时长和参与对象，系统将自动生成符合"三会一课"规范的完整组织生活方案。</p>
+        <p>通过输入活动主题、时长和参与对象，系统将自动生成符合"三会一课"规范的完整组织生活方案，包含学习资料、讨论议题和活动流程建议。</p>
     </div>
     <div class="agent-form">
         <div class="form-group">
-            <label for="org-theme">主题关键词</label>
-            <input type="text" id="org-theme" placeholder="如：科技创新、纪律教育、爱国教育等">
+            <label for="org-theme">活动主题 <span style="color: #e53e3e;">*</span></label>
+            <input type="text" id="org-theme" placeholder="如：学习贯彻党的二十大精神、科技创新发展、党风廉政建设等">
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label for="org-duration">活动时长</label>
-                <select id="org-duration">
-                    <option value="">请选择</option>
-                    <option value="1小时">1小时</option>
-                    <option value="2小时">2小时</option>
-                    <option value="半天">半天</option>
-                    <option value="全天">全天</option>
+                <label for="org-minute">活动时长（分钟）</label>
+                <select id="org-minute">
+                    <option value="30">30分钟</option>
+                    <option value="60" selected>60分钟</option>
+                    <option value="90">90分钟</option>
+                    <option value="120">120分钟</option>
+                    <option value="180">180分钟（半天）</option>
+                    <option value="240">240分钟</option>
                 </select>
             </div>
             <div class="form-group">
-                <label for="org-audience">参与对象</label>
-                <select id="org-audience">
-                    <option value="">请选择</option>
-                    <option value="党员">党员</option>
-                    <option value="预备党员">预备党员</option>
-                    <option value="入党积极分子">入党积极分子</option>
-                    <option value="全体师生">全体师生</option>
-                </select>
+                <label for="org-participant">参与对象 <span style="color: #e53e3e;">*</span></label>
+                <input type="text" id="org-participant" placeholder="如：党支部全体党员、教职工党员、学生党员等">
             </div>
         </div>
-        <button class="generate-btn" onclick="generateOrgPlan()">生成组织生活方案</button>
+        <div class="feature-highlights">
+            <h4>🎯 生成内容包含</h4>
+            <ul>
+                <li>📚 相关学习资料推荐</li>
+                <li>💬 重点讨论议题设置</li>
+                <li>📋 详细活动流程建议</li>
+                <li>✅ 符合"三会一课"规范要求</li>
+            </ul>
+        </div>
+        <button class="generate-btn" onclick="generateOrgPlan()">
+            <span class="btn-icon">🚀</span>
+            生成组织生活方案
+        </button>
+
+        <!-- 组织生活方案显示区域 -->
+        <div id="org-plan-result" class="org-plan-result" style="display: none;">
+            <h4>📋 组织生活方案</h4>
+            <div id="org-plan-content">
+                <!-- 动态插入生成的内容 -->
+            </div>
+        </div>
     </div>
 </div>
 
@@ -948,5 +963,216 @@
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* 组织生活方案结果显示样式 */
+.activity-plan-result {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    margin: 1rem 0;
+}
+
+.activity-plan-result .result-section {
+    padding: 1.5rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.activity-plan-result .result-section:last-child {
+    border-bottom: none;
+}
+
+.activity-plan-result .result-section h3 {
+    margin: 0 0 1rem 0;
+    color: #c62828;
+    font-size: 1.2rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.activity-plan-result .study-materials,
+.activity-plan-result .discussion-topics {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.activity-plan-result .material-item,
+.activity-plan-result .topic-item {
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #c62828;
+    line-height: 1.6;
+    color: #333;
+    transition: all 0.3s ease;
+}
+
+.activity-plan-result .material-item:hover,
+.activity-plan-result .topic-item:hover {
+    background: #f0f0f0;
+    transform: translateX(4px);
+}
+
+/* 新增项目的动画效果 */
+.material-item.new-item,
+.topic-item.new-item {
+    animation: slideInBounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes slideInBounce {
+    0% {
+        opacity: 0;
+        transform: translateX(-20px) scale(0.9);
+    }
+    50% {
+        opacity: 0.8;
+        transform: translateX(2px) scale(1.02);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+.activity-plan-result .activity-flow {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.2rem;
+}
+
+.activity-plan-result .flow-content {
+    line-height: 1.8;
+    color: #333;
+    white-space: pre-wrap;
+}
+
+.activity-plan-result .no-content {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 2rem;
+    background: #f9f9f9;
+    border-radius: 8px;
+}
+
+/* 流式内容显示样式 */
+.streaming-content {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    margin: 1rem 0;
+}
+
+.streaming-content .section-placeholder {
+    padding: 1.5rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.streaming-content .section-placeholder:last-child {
+    border-bottom: none;
+}
+
+.streaming-content .section-placeholder h4 {
+    margin: 0 0 1rem 0;
+    color: #666;
+    font-size: 1.1rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.streaming-content .content-streaming {
+    color: #666;
+    font-style: italic;
+}
+
+.streaming-content .placeholder-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.streaming-content .material-item,
+.streaming-content .topic-item {
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #ddd;
+    line-height: 1.6;
+    color: #333;
+    margin-bottom: 0.8rem;
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.streaming-content .flow-content {
+    line-height: 1.8;
+    color: #333;
+    white-space: pre-wrap;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.2rem;
+    animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 错误内容样式 */
+.error-content {
+    text-align: center;
+    padding: 2rem;
+    background: #fff5f5;
+    border-radius: 8px;
+    border: 1px solid #fed7d7;
+    color: #c53030;
+    line-height: 1.6;
+}
+
+.error-content p {
+    margin: 0.5rem 0;
+}
+
+/* 组织生活方案显示区域样式 */
+.org-plan-result {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.org-plan-result h4 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.org-plan-result .activity-plan-result {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    margin: 0;
 }
 </style>

@@ -8,11 +8,6 @@ from src.utils import constant
 from src.model.policy import PolicyQaMessage
 
 
-from src.utils.ve_music.GenSongDemo import generate_music_async
-from pydantic import BaseModel
-import time
-
-
 class PolicyAgent:
     def __init__(self):
         self.llm =ChatOpenAI(temperature=1.0, model="kimi-k2-250905", base_url=constant.VE_BASE_URL, api_key=settings.VE_KEY)

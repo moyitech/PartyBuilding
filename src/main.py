@@ -12,8 +12,10 @@ import aiofiles
 from urllib.parse import urlparse
 
 import src.agent.policy_qa
+from src.agent.activity_design import ActivityDesignAgent
 from src.agent.music_agent import MusicAgent
 from src.agent.policy_qa import PolicyAgent
+from src.model.activity import ActivityDesignOutput, ActivityDesignInput
 from src.model.music import MusicGenerateParam
 from src.conf.env import settings
 from collections.abc import AsyncIterator
@@ -45,6 +47,13 @@ async def openai_stream_generator(stream: AsyncIterator[AIMessageChunk]):
 
         yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
 
+    # 结束标志
+    yield "data: [DONE]\n\n"
+
+
+async def dict_stream_generator(stream: AsyncIterator[dict]):
+    async for chunk in stream:
+        yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
     # 结束标志
     yield "data: [DONE]\n\n"
 
@@ -234,6 +243,16 @@ async def policy_qa(qa_param: PolicyQaParam):
     except Exception as e:
         logger.error(f"政策问答失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"政策问答失败: {str(e)}")
+
+@app.post("/activity_design")
+async def activity_design(design_param: ActivityDesignInput):
+    try:
+        agent = ActivityDesignAgent()
+        stream = await agent.generate(design_param)
+        return StreamingResponse(dict_stream_generator(stream), media_type="text/event-stream")
+    except Exception as e:
+        logger.error(f"活动设计失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"活动设计失败: {str(e)}")
 
 
 frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
