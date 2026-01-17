@@ -57,7 +57,7 @@ async def generate_music_async(
         sk = settings.VE_SK
 
     # API配置
-    action = "GenSongV4"
+    action = "GenSongForTime"
     version = "2024-08-12"
     region = "cn-beijing"
     service = 'imagination'
